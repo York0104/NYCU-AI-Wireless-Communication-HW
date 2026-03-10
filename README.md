@@ -38,7 +38,6 @@ Tested environment:
 - Python `3.11.5`
 - Windows PowerShell
 
-Required packages are listed in [requirements.txt](/c:/Users/house/OneDrive/桌面/NYCU/AI無線通訊/HW/HW2/requirements.txt).
 
 ## Installation
 

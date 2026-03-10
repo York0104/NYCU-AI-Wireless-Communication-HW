@@ -104,25 +104,3 @@ python PPO_MountainCar-v0_submit.py
 ```
 
 This version is intentionally closer to the original exercise starter code and mainly focuses on the PPO update implementation.
-
-## Difference Between The Two Versions
-
-### `PPO_MountainCar-v0.py`
-
-This is the practical version for running experiments.
-
-- adds command-line arguments such as `--epochs` and `--save-interval`
-- prints episode reward and moving average
-- saves checkpoint files automatically
-- saves reward and moving-average plots
-- includes some compatibility fixes for the current Gym API
-- includes small training adjustments such as advantage normalization and tuned hyperparameters
-
-### `PPO_MountainCar-v0_submit.py`
-
-This is the cleaner homework submission version.
-
-- keeps the structure close to the original provided code
-- fills in the PPO blank section in `update()`
-- avoids extra experiment features unless needed for compatibility
-- is more suitable if the instructor expects a code style close to the starter template

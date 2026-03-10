@@ -36,7 +36,6 @@ The goal is to reach the flag within the episode step limit.
 Tested environment:
 
 - Python `3.11.5`
-- Windows PowerShell
 
 
 ## Installation

@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+
+exp/
+exp_submit/
+param/
+param_submit/
+
+.DS_Store
+Thumbs.db

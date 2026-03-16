@@ -145,7 +145,7 @@ y = Hx + n
 
 ## Python File
 
-The implementation is provided in [Exercise_2_4b.py](./Exercise_2_4_b.py).
+The implementation is provided in [Exercise_2_4b.py](./Exercise_2_4b.py).
 
 ## Training Configuration
 

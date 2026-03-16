@@ -23,4 +23,4 @@ This repo serves as the overall homework submission repository for the course.
 
 ## Author
 
-- York0104
+- York

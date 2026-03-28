@@ -68,45 +68,8 @@ The generated dataset has the following properties:
 
 This dataset supports both DNN training and MSE evaluation, allowing the entire experiment pipeline to run completely. However, it should be noted that this dataset is a self-generated compatible version, so its statistical distribution may not be exactly identical to the textbook dataset or the author’s original private dataset.
 
-## 4. Completed Implementation Items
 
-Since the original reference repository was not directly executable, this project completes the following parts:
-
-### 4.1 DNN Channel Estimator Implementation
-
-Completed in `tools/networks.py`:
-
-- input placeholder
-- label placeholder
-- two-layer MLP architecture
-- output layer
-- L2 loss
-
-### 4.2 LMMSE Channel Estimator Implementation
-
-Completed in `tools/raputil.py`:
-
-- LS pilot estimation
-- channel covariance weighting
-- LMMSE estimation matrix
-- final channel estimation result
-
-### 4.3 Channel Dataset Generation
-
-Added `tools/generate_channel_dataset.py` to create:
-
-- `tools/channel_train.npy`
-- `tools/channel_test.npy`
-
-### 4.4 Command-Line Experiment Workflow
-
-Modified `main.py` so that the full experiment pipeline can be executed using command-line arguments without manually editing the source code.
-
-### 4.5 Result Integration and Plotting
-
-Added `plot_results.py` to plot the four `.mat` result files in a single figure for reporting and analysis.
-
-## 5. Main Files
+## 4. Main Files
 
 - `main.py`: main entry point for training and testing
 - `plot_results.py`: loads the four `.mat` result files and plots the final figure
@@ -115,7 +78,7 @@ Added `plot_results.py` to plot the four `.mat` result files in a single figure 
 - `tools/generate_channel_dataset.py`: generates `channel_train.npy` and `channel_test.npy`
 - `dnn_ce/`: stores DNN weight files under different SNR and CP settings
 
-## 6. Execution Environment
+## 5. Execution Environment
 
 This project was executed in a local virtual environment with the following settings:
 
@@ -124,15 +87,15 @@ This project was executed in a local virtual environment with the following sett
 - TensorFlow: `2.13.0`
 - Usage mode: `tensorflow.compat.v1`
 
-## 7. Experiment Procedure
+## 6. Experiment Procedure
 
-### 7.1 Activate the Virtual Environment
+### 6.1 Activate the Virtual Environment
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 7.2 Generate the Channel Dataset
+### 6.2 Generate the Channel Dataset
 
 ```powershell
 python tools\generate_channel_dataset.py
@@ -143,7 +106,7 @@ This generates:
 - `tools/channel_train.npy`
 - `tools/channel_test.npy`
 
-### 7.3 Train the DNN Channel Estimator
+### 6.3 Train the DNN Channel Estimator
 
 With CP:
 
@@ -157,7 +120,7 @@ Without CP:
 python main.py --ce-type dnn --mode train --cp-flag false --training-epochs 5 --snrs 5 10 15 20 25 30 35 40
 ```
 
-### 7.4 Evaluate MSE
+### 6.4 Evaluate MSE
 
 DNN with CP:
 
@@ -183,7 +146,7 @@ LMMSE without CP:
 python main.py --ce-type mmse --mode test --cp-flag false --num-trials 200 --snrs 5 10 15 20 25 30 35 40
 ```
 
-### 7.5 Plot the Final Figure
+### 6.5 Plot the Final Figure
 
 ```powershell
 python plot_results.py
@@ -193,7 +156,7 @@ This generates:
 
 - `figure_2_9_reproduced.png`
 
-## 8. Result Files
+## 7. Result Files
 
 After evaluation, the following four result files are generated:
 
@@ -202,7 +165,7 @@ After evaluation, the following four result files are generated:
 - `MSE_dnn_4QAM_CP_FREE.mat`
 - `MSE_mmse_4QAM_CP_FREE.mat`
 
-## 9. Result Analysis
+## 8. Result Analysis
 
 The reproduced MSE curves are shown below.
 

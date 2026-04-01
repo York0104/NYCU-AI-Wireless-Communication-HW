@@ -7,6 +7,7 @@ This repository contains homework assignments, code implementations, reports, an
 - `Exercise_1_12`
 - `Exercise_2_1`
 - `Exercise_2_4`
+- `Exercise_2_7`
 
 ## Description
 

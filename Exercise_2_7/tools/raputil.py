@@ -30,8 +30,6 @@ CR = 1
 
 SNRdb = 25  # signal to noise-ratio in dB at the receiver
 Clipping_Flag = False
-CP_flag = False
-NoCP = True
 
 _QPSK_mapping_table = {
     (0,1) : (-1+1j,), (1,1) : (1+1j,),
@@ -447,7 +445,7 @@ def get_WMMSE(SNR, CP_flag=True):
     h = channel_test[index].reshape((-1,))
     H,A = get_cyclic_and_cutoff_matrix(h)
     bits = np.random.binomial(n=1, p=0.5, size=(payloadBits_per_OFDM,)) #label
-    if NoCP:
+    if not CP_flag:
         signal_output = ofdm_simulate_cp_free(bits, H, A, FH, SNR, mu, K, P, pilotValue, pilotCarriers, dataCarriers, CE_flag=True)
     else:
         signal_output,_ = ofdm_simulate(bits, h, SNR, mu, CP_flag, K, P, CP, pilotValue, pilotCarriers, dataCarriers, Clipping_Flag)
@@ -460,7 +458,7 @@ def get_WMMSE(SNR, CP_flag=True):
     W_MMSE = np.concatenate(( np.concatenate((np.real(W_MMSE),-np.imag(W_MMSE)),axis=1),np.concatenate((np.imag(W_MMSE),np.real(W_MMSE)),axis=1) ))
     return W_MMSE 
 
-def sample_gen(bs, SNR = 20, training_flag=True, NoCP=False, CP_flag=True):
+def sample_gen(bs, SNR=20, training_flag=True, CP_flag=True):
     if training_flag:
         index = np.random.choice(np.arange(train_size), size=bs)    #从1*train_size的array中随机选出bs个下标
         h_total = channel_train[index]
@@ -477,7 +475,7 @@ def sample_gen(bs, SNR = 20, training_flag=True, NoCP=False, CP_flag=True):
         #channel estimation for the input samples
         bits = np.random.binomial(n=1, p=0.5, size=(payloadBits_per_OFDM, ))
         # pilotValue = Modulation(bits)
-        if NoCP:
+        if not CP_flag:
             signal_output = ofdm_simulate_cp_free(bits, H, A, FH, SNR, mu, K, P, pilotValue, pilotCarriers, dataCarriers, CE_flag=True)
         else:
             signal_output = ofdm_simulate(bits, h, SNR, mu, CP_flag, K, P, CP, pilotValue, pilotCarriers, dataCarriers,
@@ -497,7 +495,7 @@ def sample_gen(bs, SNR = 20, training_flag=True, NoCP=False, CP_flag=True):
     Xp = np.tile(np.concatenate((np.real(pilotValue), np.imag(pilotValue))), (bs, 1))  # (bs, 2K)
     return np.asarray(H_samples), np.asarray(H_labels), np.asarray(Yp), np.asarray(Xp)
 
-def sample_gen_for_OAMP(bs, SNR, sess, input_holder, output, training_flag=True):
+def sample_gen_for_OAMP(bs, SNR, sess, input_holder, output, training_flag=True, CP_flag=True):
     if training_flag:
         #generate training samples:
         index = np.random.choice(np.arange(train_size), size=bs)    #从1*train_size的array中随机选出bs个下标
@@ -519,10 +517,16 @@ def sample_gen_for_OAMP(bs, SNR, sess, input_holder, output, training_flag=True)
         H,A = get_cyclic_and_cutoff_matrix(h)
         #channel estimation for the input samples
         bits = np.random.binomial(n=1, p=0.5, size=(payloadBits_per_OFDM,))
-        if NoCP:
+        if not CP_flag:
             signal_output,sigma2,bits_mod = ofdm_simulate_cp_free(bits, H, A, FH, SNR, mu, K, P, pilotValue, pilotCarriers, dataCarriers)
         else:
-            signal_output,_ = ofdm_simulate(bits, h, SNR, mu, CP_flag, K, P, CP, pilotValue, pilotCarriers, dataCarriers, Clipping_Flag)
+            signal_output,sigma2 = ofdm_simulate(bits, h, SNR, mu, CP_flag, K, P, CP, pilotValue, pilotCarriers, dataCarriers, Clipping_Flag)
+            if mu == 2:
+                bits_mod = Modulation(bits)
+            elif mu == 4:
+                bits_mod = Modulation_16(bits)
+            else:
+                bits_mod = Modulation_64(bits)
         yp_complex = signal_output[0:K] + 1j * signal_output[K:2*K]
         Yp_complex = F @ yp_complex
         
@@ -538,7 +542,7 @@ def sample_gen_for_OAMP(bs, SNR, sess, input_holder, output, training_flag=True)
         h_est = IDFT(H_est) #??64-->16
         H_hat,A_hat = get_cyclic_and_cutoff_matrix(h_est)
 
-        if NoCP:
+        if not CP_flag:
             yd_complex = (signal_output[2*K:3*K] + 1j * signal_output[3*K:4*K]) - A_hat @ FH @ pilotValue 
             yd = np.concatenate((np.real(yd_complex.reshape((K,1))),np.imag(yd_complex.reshape((K,1))))) 
         else:
@@ -565,7 +569,8 @@ def sample_gen_for_OAMP(bs, SNR, sess, input_holder, output, training_flag=True)
     return y_,x_,H_,sigma2_
 
 
-def test_ce(sess, input_holder, output, SNR, est_type, NoCP=False, CP_flag=True, num_trail=1000):
+def test_ce(sess, input_holder, output, SNR, est_type, CP_flag=True, num_trail=1000):
+
     L = 16  # length of channel impulse response
     downsampler = allCarriers[::K // L]
     MSE_T, MSE_F = 0., 0.
@@ -575,7 +580,7 @@ def test_ce(sess, input_holder, output, SNR, est_type, NoCP=False, CP_flag=True,
         Htrue = np.fft.fft(h, n=K)
         H, A = get_cyclic_and_cutoff_matrix(h)
         bits = np.random.binomial(n=1, p=0.5, size=(payloadBits_per_OFDM,))  # label
-        if NoCP:
+        if not CP_flag:
             signal_output, sigma2, _ = ofdm_simulate_cp_free(bits, H, A, FH, SNR, mu, K, P, pilotValue, pilotCarriers,
                                                              dataCarriers)
         else:
@@ -623,7 +628,7 @@ def test_ce(sess, input_holder, output, SNR, est_type, NoCP=False, CP_flag=True,
     return MSE_T / num_trail, MSE_F / num_trail
 
 
-def test_DL_OAMP(sess,prob,x_hat_T,input_holder,output,SNR,OAMPnet=False):
+def test_DL_OAMP(sess, prob, x_hat_T, input_holder, output, SNR, OAMPnet=False, CP_flag=True):
     err_bits_target = 1000
     total_err_bits = 0
     total_bits = 0
@@ -634,7 +639,7 @@ def test_DL_OAMP(sess,prob,x_hat_T,input_holder,output,SNR,OAMPnet=False):
         h = channel_test[index].reshape((-1,))
         H, A = get_cyclic_and_cutoff_matrix(h)
         bits = np.random.binomial(n=1, p=0.5, size=(payloadBits_per_OFDM,)) #label
-        if NoCP:
+        if not CP_flag:
             signal_output, sigma2,_ = ofdm_simulate_cp_free(bits, H, A, FH, SNR, mu, K, P, pilotValue, pilotCarriers, dataCarriers)
         else:
             signal_output,sigma2 = ofdm_simulate(bits, h, SNR, mu, CP_flag, K, P, CP, pilotValue, pilotCarriers, dataCarriers, Clipping_Flag)
@@ -660,7 +665,7 @@ def test_DL_OAMP(sess,prob,x_hat_T,input_holder,output,SNR,OAMPnet=False):
 
         #关于CP-Free的仿真以及remove ISI的操作还是没搞懂——目前的操作是加上任意的GI(而非CP)，相当于只仿了ICI，故接收端不需要去除ISI
         #目前的理解：信道估计时可以不remove ISI（不知道有多大影响）；信号检测时估计出的上一帧符号直接用已知的导频信号
-        if NoCP:
+        if not CP_flag:
             yd_complex = (signal_output[2*K:3*K] + 1j * signal_output[3*K:4*K]) - A_hat @ FH @ pilotValue 
         # signal_power = np.mean(abs(yd_complex**2))   #这个yd_complex已经是加上噪声的接收信号了，不应该先把噪声减去吗？或者用H_bar*u
         # sigma2 = signal_power * 10**(-SNR/10)

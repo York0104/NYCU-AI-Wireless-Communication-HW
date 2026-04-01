@@ -1,126 +1,150 @@
 # Exercise 2.7: Data-Driven SISO-OFDM Channel Estimation
 
-This project reproduces the data-driven SISO-OFDM channel estimation experiment required in Exercise 2.7, and compares the MSE performance of a DNN-based channel estimator and an LMMSE channel estimator under different SNRs and CP settings.
+This project reproduces the SISO-OFDM channel estimation experiment in **Exercise 2.7**. It compares a **DNN-based channel estimator** and an **LMMSE channel estimator** in two settings:
 
-This implementation corresponds to the two parts of the problem:
+- with CP
+- without CP
 
-- `(a)` Under an OFDM system with cyclic prefix (CP), compare the DNN and LMMSE channel estimators and reproduce the solid-line results in Figure 2.9.
-- `(b)` Remove the cyclic prefix (CP) and repeat the same experiment to demonstrate the impact of inter-symbol interference (ISI) on estimation performance, reproducing the dashed-line results.
+The target is to reproduce the qualitative behavior of **Figure 2.9** in the homework.
 
-The final reproduced figure is saved as `figure_2_9_reproduced.png`.
+## Overview
 
-## 1. Problem Mapping and Experimental Objective
-
-This problem requires channel estimation under a SISO-OFDM architecture with the following system settings:
+System settings:
 
 - Number of subcarriers: `64`
-- First OFDM symbol: `64` QPSK pilots
-- Second OFDM symbol: data symbols
+- Pilot symbol: first OFDM symbol with `64` QPSK pilots
+- Data symbol: second OFDM symbol
 - SNR range: `5 dB` to `40 dB`
-- SNR interval: `5 dB`
-- Compared methods: `DNN` and `LMMSE`
-- Additional condition: compare both `with CP` and `without CP`
+- SNR step: `5 dB`
+- Compared estimators: `DNN`, `LMMSE`
+- Scenarios: with CP, without CP
 
-Therefore, this project completes the following four experiments:
+Therefore, the project evaluates four cases:
 
 - DNN with CP
 - LMMSE with CP
 - DNN without CP
 - LMMSE without CP
 
-These four results together form the reproduction of Figure 2.9.
+## Project Structure
 
-## 2. System Design
-
-### 2.1 DNN Channel Estimator
-
-The DNN channel estimator is implemented in `tools/networks.py` using a multi-layer perceptron (MLP). Its design is as follows:
-
-- Input: concatenated vector of pilot received signal `Yp` and pilot symbols `Xp`
-- Hidden layers:
-  - `Dense(500, relu)`
-  - `Dense(250, relu)`
-- Output: real and imaginary parts of the estimated frequency-domain channel
-- Loss function: `tf.nn.l2_loss`
-
-This design allows the model to learn the mapping between pilot observations and the channel response directly from data, making it a data-driven channel estimation method.
-
-### 2.2 LMMSE Channel Estimator
-
-The LMMSE channel estimator is implemented in the `MMSE_CE()` function in `tools/raputil.py`. Its main steps are:
-
-- Build an LS initial channel estimate using pilots
-- Construct `Rhp` and `Rpp` based on the channel correlation model
-- Compute the LMMSE weighting matrix
-- Produce the final frequency-domain channel estimate
-
-This is a traditional model-based channel estimation method and serves as the baseline for comparison with the DNN approach.
-
-## 3. Channel Dataset Description
-
-The original public repository did not provide `tools/channel_train.npy` and `tools/channel_test.npy`. Therefore, this project adds `tools/generate_channel_dataset.py` to generate a compatible channel dataset.
-
-The generated dataset has the following properties:
-
-- 16-tap complex Rayleigh channels
-- Exponential power-delay profile
-- Each channel sample is normalized to stabilize overall signal power
-
-This dataset supports both DNN training and MSE evaluation, allowing the entire experiment pipeline to run completely. However, it should be noted that this dataset is a self-generated compatible version, so its statistical distribution may not be exactly identical to the textbook dataset or the author’s original private dataset.
-
-
-## 4. Main Files
-
-- `main.py`: main entry point for training and testing
-- `plot_results.py`: loads the four `.mat` result files and plots the final figure
-- `tools/networks.py`: DNN channel estimator
-- `tools/raputil.py`: OFDM utilities, channel simulation, LMMSE, and MSE evaluation
-- `tools/generate_channel_dataset.py`: generates `channel_train.npy` and `channel_test.npy`
-- `dnn_ce/`: stores DNN weight files under different SNR and CP settings
-
-## 5. Execution Environment
-
-This project was executed in a local virtual environment with the following settings:
-
-- Virtual environment: `.venv`
-- Python: `3.11`
-- TensorFlow: `2.13.0`
-- Usage mode: `tensorflow.compat.v1`
-
-## 6. Experiment Procedure
-
-### 6.1 Activate the Virtual Environment
-
-```powershell
-.\.venv\Scripts\Activate.ps1
+```text
+Exercise_2_7
+├── main.py
+├── plot_results.py
+├── plot_training_curves.py
+├── figure_2_9_reproduced.png
+├── training_curve_with_cp.png
+├── training_curve_without_cp.png
+├── MSE_dnn_4QAM.mat
+├── MSE_mmse_4QAM.mat
+├── MSE_dnn_4QAM_CP_FREE.mat
+├── MSE_mmse_4QAM_CP_FREE.mat
+├── dnn_ce/
+└── tools/
+    ├── generate_channel_dataset.py
+    ├── networks.py
+    ├── raputil.py
+    ├── channel_train.npy
+    └── channel_test.npy
 ```
 
-### 6.2 Generate the Channel Dataset
+## Dataset Note
+
+The original public repository did not provide:
+
+- `tools/channel_train.npy`
+- `tools/channel_test.npy`
+
+So this project adds `tools/generate_channel_dataset.py` to generate a compatible dataset for training and evaluation.
+
+Generated channel characteristics:
+
+- 16-tap complex Rayleigh fading channels
+- Exponential power-delay profile
+- Per-sample normalization
+
+This makes the whole pipeline runnable, but the generated dataset is still a compatible replacement. Its distribution may not be exactly the same as the original private dataset used by the textbook or original author.
+
+## Method
+
+### DNN Channel Estimator
+
+Implemented in `tools/networks.py`.
+
+Architecture:
+
+- Input: concatenation of pilot received signal `Yp` and pilot symbols `Xp`
+- Hidden layer 1: `Dense(500, relu)`
+- Hidden layer 2: `Dense(250, relu)`
+- Output: real and imaginary parts of the estimated frequency-domain channel
+- Loss: `tf.nn.l2_loss`
+
+### LMMSE Channel Estimator
+
+Implemented in `tools/raputil.py` through `MMSE_CE()`.
+
+Main procedure:
+
+- Obtain LS pilot estimate
+- Construct channel correlation matrices
+- Compute the LMMSE weighting matrix
+- Estimate the frequency-domain channel
+
+## Environment
+
+This project was tested with:
+
+- Python `3.11`
+- TensorFlow `2.13.0`
+- `tensorflow.compat.v1`
+- Windows PowerShell / WSL-compatible execution
+
+## How to Run
+
+### 1. Activate Environment
+
+```powershell
+.\env\Scripts\Activate.ps1
+```
+
+### 2. Generate Channel Dataset
 
 ```powershell
 python tools\generate_channel_dataset.py
 ```
 
-This generates:
+Generated files:
 
 - `tools/channel_train.npy`
 - `tools/channel_test.npy`
 
-### 6.3 Train the DNN Channel Estimator
+### 3. Train DNN Models
 
 With CP:
 
 ```powershell
-python main.py --ce-type dnn --mode train --cp-flag true --training-epochs 5 --snrs 5 10 15 20 25 30 35 40
+python main.py --ce-type dnn --mode train --cp-flag true --training-epochs 100 --snrs 5 10 15 20 25 30 35 40
 ```
 
 Without CP:
 
 ```powershell
-python main.py --ce-type dnn --mode train --cp-flag false --training-epochs 5 --snrs 5 10 15 20 25 30 35 40
+python main.py --ce-type dnn --mode train --cp-flag false --training-epochs 100 --snrs 5 10 15 20 25 30 35 40
 ```
 
-### 6.4 Evaluate MSE
+### 4. Plot DNN Training Curves
+
+```powershell
+python plot_training_curves.py
+```
+
+Generated files:
+
+- `training_curve_with_cp.png`
+- `training_curve_without_cp.png`
+
+### 5. Evaluate MSE
 
 DNN with CP:
 
@@ -146,39 +170,105 @@ LMMSE without CP:
 python main.py --ce-type mmse --mode test --cp-flag false --num-trials 200 --snrs 5 10 15 20 25 30 35 40
 ```
 
-### 6.5 Plot the Final Figure
+### 6. Plot Final Result Figure
 
 ```powershell
 python plot_results.py
 ```
 
-This generates:
+Generated file:
 
 - `figure_2_9_reproduced.png`
 
-## 7. Result Files
+## Results
 
-After evaluation, the following four result files are generated:
+### Final MSE Comparison
+
+![Final MSE Comparison](./figure_2_9_reproduced.png)
+
+Observations:
+
+- Under the with-CP setting, both estimators improve as SNR increases.
+- Under the with-CP setting, LMMSE achieves the best performance, especially at medium and high SNR.
+- Under the without-CP setting, LMMSE degrades significantly and becomes worse at high SNR.
+- Under the without-CP setting, the DNN estimator remains more stable and continues to improve with SNR.
+
+These results reproduce the expected qualitative behavior:
+
+- solid-line behavior with CP
+- dashed-line behavior without CP
+
+## Training Curves
+
+### DNN with CP
+
+![DNN Training Curve With CP](./training_curve_with_cp.png)
+
+### DNN without CP
+
+![DNN Training Curve Without CP](./training_curve_without_cp.png)
+
+Observations:
+
+- Validation loss decreases rapidly during the first several epochs.
+- Most models reach a relatively stable region after around 20-30 epochs.
+- Higher-SNR settings generally converge to lower validation loss.
+- The DNN is trainable in both CP and CP-free settings.
+
+## Discussion
+
+### Why does LMMSE perform best with CP?
+
+With CP, the OFDM model matches the assumptions used by LMMSE well, so LMMSE becomes a very strong model-based baseline and achieves the lowest MSE.
+
+### Why does LMMSE deteriorate without CP?
+
+Without CP, inter-symbol interference breaks the ideal OFDM assumption. This causes model mismatch, so the LMMSE estimator becomes interference-limited at high SNR.
+
+### Why is DNN more stable without CP?
+
+The DNN does not rely on the same analytical assumptions as LMMSE. Instead, it learns the mapping from pilot observations to channel estimates directly from data, so it remains more robust when the system deviates from the ideal CP-based model.
+
+## Conclusion
+
+This project successfully reproduces the required qualitative behavior of Exercise 2.7.
+
+Main conclusions:
+
+- With CP, LMMSE performs best and matches theory.
+- Without CP, LMMSE deteriorates because of ISI and model mismatch.
+- The DNN is more robust in the CP-free setting, although it does not outperform LMMSE in the standard CP-enabled case.
+
+Overall, the project provides a complete reproducible pipeline including:
+
+- dataset generation
+- DNN training
+- MSE evaluation
+- final result plotting
+- training curve visualization
+
+## Files Generated After Running
+
+### Checkpoints
+
+Stored in `dnn_ce/`:
+
+- `CE_DNN_4QAM_SNR_5dB.npz`
+- `...`
+- `CE_DNN_4QAM_SNR_40dB.npz`
+- `CE_DNN_CPFREE_4QAM_SNR_5dB.npz`
+- `...`
+- `CE_DNN_CPFREE_4QAM_SNR_40dB.npz`
+
+### Result Files
 
 - `MSE_dnn_4QAM.mat`
 - `MSE_mmse_4QAM.mat`
 - `MSE_dnn_4QAM_CP_FREE.mat`
 - `MSE_mmse_4QAM_CP_FREE.mat`
 
-## 8. Result Analysis
+### Figures
 
-The reproduced MSE curves are shown below.
-
-![Reproduced Figure 2.9](./figure_2_9_reproduced.png)
-
-The MSE curves obtained in this experiment show trends consistent with the problem requirements:
-
-- Under the `with CP` setting, `LMMSE` improves steadily as SNR increases and gives the best performance.
-- Under the `without CP` setting, both `DNN` and `LMMSE` experience performance degradation due to additional interference introduced by ISI.
-- The CP-free `LMMSE` curve deteriorates at high SNR, indicating that the system becomes interference-limited rather than noise-limited.
-- The DNN channel estimator works under both CP and CP-free settings, although its performance is more sensitive to the number of training epochs and the generated channel dataset.
-
-These results satisfy the qualitative requirements of the homework:
-
-- Reproduce the solid-line behavior when CP is used
-- Reproduce the dashed-line behavior when CP is removed
+- `figure_2_9_reproduced.png`
+- `training_curve_with_cp.png`
+- `training_curve_without_cp.png`

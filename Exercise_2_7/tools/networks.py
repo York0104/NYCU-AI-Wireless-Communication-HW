@@ -59,11 +59,21 @@ def build_ce_dnn(K, SNR, savefile, learning_rate=1e-3, training_epochs=2000, bat
     loss_history = []
     save = {}  # for the best model
 
-    val_ls, val_labels, val_Yp, val_Xp = sample_gen(batch_size * 100, SNR, training_flag=False, CP_flag=cp_flag)
+    val_ls, val_labels, val_Yp, val_Xp = sample_gen(
+        batch_size * 100,
+        SNR,
+        training_flag=False,
+        CP_flag=cp_flag,
+    )
     for epoch in range(training_epochs + 1):
         train_loss = 0.
         for m in range(20):
-            batch_ls, batch_labels, Yp, Xp = sample_gen(batch_size, SNR, training_flag=True, CP_flag=cp_flag)
+            batch_ls, batch_labels, Yp, Xp = sample_gen(
+                batch_size,
+                SNR,
+                training_flag=True,
+                CP_flag=cp_flag,
+            )
             sample = np.concatenate((Yp, Xp), axis=1)  # (bs, 4K)
             _, loss = sess.run([optimizer, loss_], feed_dict={nn_input: sample, H_true: batch_labels})
             train_loss += loss
@@ -93,6 +103,11 @@ def build_ce_dnn(K, SNR, savefile, learning_rate=1e-3, training_epochs=2000, bat
     log = log + '\nloss={loss:.9f} in {i} iterations   best={best:.9f} in {j} iterations'.format(loss=loss, i=epoch, best=loss_best, j=loss_history.argmin() * test_step)
 
     state['log'] = log
+    state['loss_history'] = np.asarray(loss_history, dtype=np.float64)
+    state['test_step'] = test_step
+    state['training_epochs'] = training_epochs
+    state['snr'] = SNR
+    state['cp_flag'] = cp_flag
     save_trainable_vars(sess, savefile, **state)
 
     print("optimization finished")

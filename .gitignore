@@ -1,15 +1,50 @@
+# =========================
+# Python virtual environments
+# =========================
 .venv/
 env/
 venv/
 */env/
 */.venv/
+
+# =========================
+# Python cache
+# =========================
 __pycache__/
 *.pyc
 
+# =========================
+# Existing project folders
+# =========================
 exp/
 exp_submit/
 param/
 param_submit/
 
+# =========================
+# OS junk
+# =========================
 .DS_Store
 Thumbs.db
+
+# =========================
+# Exercise 2.7 generated artifacts
+# =========================
+Exercise_2_7/dnn_ce/*.npz
+Exercise_2_7/MSE_*.mat
+Exercise_2_7/tools/channel_train.npy
+Exercise_2_7/tools/channel_test.npy
+
+# =========================
+# Large third-party / external source trees
+# =========================
+Exercise_2_4/QuaDRiGa-main/
+
+
+# Dataset (very important)
+*.mat
+*.npz
+*.npy
+
+Exercise_2_7/dnn_ce/
+Exercise_2_7/tools/channel_*.npy

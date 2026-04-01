@@ -81,7 +81,13 @@ def run(args):
             )
         if test_ce:
             mse_t, mse_f = raputil.test_ce(
-                sess, input_holder, output, snr, est_type=ce_type, CP_flag=cp_flag, num_trail=num_trials
+                sess,
+                input_holder,
+                output,
+                snr,
+                est_type=ce_type,
+                CP_flag=cp_flag,
+                num_trail=num_trials,
             )
             mse_t_all.append(mse_t)
             mse_f_all.append(mse_f)

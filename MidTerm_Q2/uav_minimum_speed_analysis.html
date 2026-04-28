@@ -1,0 +1,321 @@
+
+<style>
+  .tab-bar{display:flex;gap:4px;margin-bottom:1.5rem;flex-wrap:wrap}
+  .tab{padding:6px 14px;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer;transition:all .15s}
+  .tab.active{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-primary);font-weight:500}
+  .panel{display:none}.panel.active{display:block}
+  .card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:1rem}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .mini{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;font-size:12px;color:var(--color-text-secondary)}
+  .mini strong{display:block;font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px}
+  .formula{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 16px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);margin:10px 0;line-height:2}
+  .go{border-left:2px solid #1D9E75;padding:6px 12px;margin:6px 0;font-size:13px;color:var(--color-text-secondary);border-radius:0}
+  .info{border-left:2px solid #534AB7;padding:6px 12px;margin:6px 0;font-size:13px;color:var(--color-text-secondary);border-radius:0}
+  .warn{border-left:2px solid #D85A30;padding:6px 12px;margin:6px 0;font-size:13px;color:var(--color-text-secondary);border-radius:0}
+  .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0}
+  .mc{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px}
+  .ml{font-size:11px;color:var(--color-text-secondary);margin:0 0 3px;text-transform:uppercase;letter-spacing:.04em}
+  .mv{font-size:20px;font-weight:500;color:var(--color-text-primary)}
+  .mu{font-size:11px;color:var(--color-text-secondary)}
+  .ctrl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-secondary);margin:8px 0}
+  .ctrl label{min-width:140px}
+  .ctrl span{min-width:70px;font-family:var(--font-mono);font-size:11px}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+  th{background:var(--color-background-secondary);padding:8px 10px;text-align:left;font-weight:500;color:var(--color-text-primary);border-bottom:1px solid var(--color-border-secondary)}
+  td{padding:7px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);vertical-align:top}
+  tr:last-child td{border:none}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:var(--border-radius-md);font-weight:500;margin-left:4px}
+  .b-fw{background:#EEEDFE;color:#3C3489}
+  .b-rw{background:#E1F5EE;color:#085041}
+</style>
+
+<h2 class="sr-only">UAV minimum speed analysis from Figure 3.4 wing loading chart and Hou et al. micro-Doppler paper</h2>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="show('fixedwing')">Fixed-wing (Fig. 3.4)</button>
+  <button class="tab" onclick="show('rotary')">Rotary-wing (Hou et al.)</button>
+  <button class="tab" onclick="show('compare')">Comparison</button>
+  <button class="tab" onclick="show('flame')">FLAME relevance</button>
+</div>
+
+<!-- TAB 1: FIXED WING -->
+<div id="panel-fixedwing" class="panel active">
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 8px">Reading Figure 3.4 — V_min vs Wing Loading</p>
+    <p style="font-size:12px;color:var(--color-text-secondary);margin:0 0 10px">Stall speed formula: <span style="font-family:var(--font-mono)">V_min = √(2W/S / ρ·CL_max)</span> with CL_max ≈ 1.0 (fitted from graph), ρ = 1.225 kg/m³</p>
+    <div style="position:relative;width:100%;height:240px">
+      <canvas id="vminChart" role="img" aria-label="V_min vs wing loading chart reproducing Figure 3.4 with MAV and Mini UAV operating regions highlighted"></canvas>
+    </div>
+    <div class="ctrl" style="margin-top:10px">
+      <label>Wing loading W/S (N/m²)</label>
+      <input type="range" id="wl-sl" min="1" max="200" step="1" value="50" oninput="updateVmin()">
+      <span id="wl-v">50 N/m²</span>
+    </div>
+    <div class="metric-grid" id="vmin-metrics"></div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 8px">Operating ranges extracted from Figure 3.4</p>
+    <table>
+      <tr><th>UAV class</th><th>Wing loading range</th><th>V_min lower bound</th><th>V_min upper bound</th><th>Notes</th></tr>
+      <tr>
+        <td><span class="badge b-fw">MAV</span></td>
+        <td>~5–50 N/m²</td>
+        <td style="font-weight:500;color:#534AB7">≈ 3.2 m/s</td>
+        <td style="font-weight:500;color:#534AB7">≈ 9.0 m/s</td>
+        <td>Left arrow boundary ≈ 5 N/m²</td>
+      </tr>
+      <tr>
+        <td><span class="badge b-rw">Mini UAV</span></td>
+        <td>~25–150 N/m²</td>
+        <td style="font-weight:500;color:#1D9E75">≈ 6.4 m/s</td>
+        <td style="font-weight:500;color:#1D9E75">≈ 15.7 m/s</td>
+        <td>Left arrow boundary ≈ 25 N/m²</td>
+      </tr>
+    </table>
+    <div class="warn">These are stall speeds — fixed-wing minimum speeds. Below V_min the wing can no longer generate enough lift. Fixed-wing UAVs cannot hover and must maintain V ≥ V_min at all times.</div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 8px">Derivation from the textbook formula</p>
+    <div class="formula">
+Disc loading: v_i = k_n·(p / 2ρ)^(1/2)            [Eq. 3.7 in book]
+  k_n = 1.05–1.20 (correction factor, typically 1.1)
+  p   = disc loading [N/m²]
+  ρ   = 1.225 kg/m³ (sea level air density)
+
+For fixed-wing stall speed (equivalent):
+  V_min = √(2·(W/S) / (ρ·CL_max))
+
+Fitted CL_max ≈ 1.0 from Fig. 3.4 calibration:
+  At W/S = 50 N/m² → V_min = √(100/1.225) = 9.04 m/s  ✓ matches graph
+  At W/S = 25 N/m² → V_min = √(50/1.225)  = 6.39 m/s  ✓ matches graph
+  At W/S = 10 N/m² → V_min = √(20/1.225)  = 4.04 m/s  ✓ matches graph
+
+→ ABSOLUTE MINIMUM on graph: approaches 0 as W/S → 0
+→ PRACTICAL MAV minimum: ~3.2 m/s at W/S ≈ 5 N/m²
+→ PRACTICAL Mini UAV minimum: ~6.4 m/s at W/S ≈ 25 N/m²
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: ROTARY WING -->
+<div id="panel-rotary" class="panel">
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 8px">Hou, Wang, Lin — "Micro-Doppler Shift..." IEEE WCL 2021 (same lab as FLAME)</p>
+    <div class="metric-grid">
+      <div class="mc"><div class="ml">Min. airspeed</div><div class="mv" style="color:#1D9E75">0</div><div class="mu">m/s — can hover</div></div>
+      <div class="mc"><div class="ml">Motor speed fm</div><div class="mv">4620</div><div class="mu">RPM (77 rev/s)</div></div>
+      <div class="mc"><div class="ml">Propeller Dp</div><div class="mv">254</div><div class="mu">mm diameter</div></div>
+      <div class="mc"><div class="ml">Blades Nb</div><div class="mv">2</div><div class="mu">per propeller</div></div>
+      <div class="mc"><div class="ml">Carrier fc</div><div class="mv">2.5</div><div class="mu">GHz (sub-6 GHz)</div></div>
+      <div class="mc"><div class="ml">Max micro-Doppler</div><div class="mv">963</div><div class="mu">Hz from propellers</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 8px">What "minimum speed" means for a rotary-wing UAV</p>
+    <div class="formula">
+Rotary-wing (quadcopter) minimum airspeed:
+  V_min_airspeed = 0 m/s   ← can hover indefinitely
+
+BUT: propellers must spin to generate lift. Blade tip speed:
+  V_tip = π × Dp × fm = π × 0.254 × 77 = 61.4 m/s
+  (propeller tip always moves at 61.4 m/s even when hovering)
+
+Reflection zone angle (Eq. 4 in paper):
+  θrz = sin⁻¹(Dp / 4·dant) = sin⁻¹(0.254 / (4×0.200)) = sin⁻¹(0.3175) ≈ 0.32 rad
+
+Maximum micro-Doppler frequency (Eq. 5, at θe = θrz):
+  fD,r_max = 4π·fm·dant·fc·sin(2θrz) / c
+            = 4π × 77 × 0.200 × 2.5×10⁹ × sin(0.64) / (3×10⁸)
+            ≈ 963.09 Hz  ✓ confirmed in paper
+
+Reflection period (how often a blade sweeps past):
+  T_reflect = 60 / (fm × Nb) = 60 / (4620 × 2) ≈ 6.49 ms
+    </div>
+    <div class="go">Key result: the UAV can fly at 0 m/s (hover), but its propellers create a micro-Doppler shift of up to 963 Hz — a channel impairment that exists even during stationary hovering and must be compensated.</div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 8px">Interactive: micro-Doppler vs motor speed</p>
+    <div class="ctrl">
+      <label>Motor speed fm (RPM)</label>
+      <input type="range" id="fm-sl" min="1000" max="8000" step="100" value="4620" oninput="updateDoppler()">
+      <span id="fm-v">4620 RPM</span>
+    </div>
+    <div class="ctrl">
+      <label>Carrier freq fc (GHz)</label>
+      <input type="range" id="fc-sl" min="0.9" max="6" step="0.1" value="2.5" oninput="updateDoppler()">
+      <span id="fc-v">2.5 GHz</span>
+    </div>
+    <div class="metric-grid" id="doppler-metrics"></div>
+  </div>
+</div>
+
+<!-- TAB 3: COMPARISON -->
+<div id="panel-compare" class="panel">
+  <div class="card">
+    <p style="font-size:14px;font-weight:500;color:var(--color-text-primary);margin:0 0 10px">Fixed-wing vs Rotary-wing — minimum speed is a completely different physical concept</p>
+    <table>
+      <tr><th>Property</th><th><span class="badge b-fw">Fixed-wing (Fig. 3.4)</span></th><th><span class="badge b-rw">Rotary-wing (Hou et al.)</span></th></tr>
+      <tr><td>Min. airspeed</td><td style="font-weight:500">3.2–15.7 m/s (stall speed)</td><td style="font-weight:500;color:#1D9E75">0 m/s (can hover)</td></tr>
+      <tr><td>Mechanism</td><td>Wing must move to generate lift via Bernoulli</td><td>Rotor generates lift at all speeds incl. zero</td></tr>
+      <tr><td>Min speed driver</td><td>Wing loading W/S, CL_max</td><td>No minimum — only motor RPM minimum to maintain thrust</td></tr>
+      <tr><td>At minimum speed</td><td>Stall → aircraft falls</td><td>Hover — stable indefinitely (energy permitting)</td></tr>
+      <tr><td>Propeller effect</td><td>Propeller for thrust only, no hover Doppler</td><td>Propeller spins at 4620 RPM even stationary → 963 Hz micro-Doppler</td></tr>
+      <tr><td>Channel model implication</td><td>Always moving → classical Doppler from translation</td><td>Stationary hover → micro-Doppler from propellers even at V=0</td></tr>
+      <tr><td>FLAME applicability</td><td>Not used — FLAME UAVs hover during FL rounds</td><td>Directly applicable — quadrotors hover during training</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;margin:0 0 8px">The Figure 3.4 curve — reconstructed mathematically</p>
+    <div style="position:relative;width:100%;height:200px">
+      <canvas id="compareChart" role="img" aria-label="Comparison showing fixed-wing minimum speed curve and rotary-wing constant zero minimum speed line"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 4: FLAME RELEVANCE -->
+<div id="panel-flame" class="panel">
+  <div class="card">
+    <p style="font-size:14px;font-weight:500;color:var(--color-text-primary);margin:0 0 10px">How both papers connect to your FLAME paper</p>
+  </div>
+  <div class="row2">
+    <div class="mini">
+      <strong>Textbook Figure 3.4 → FLAME fixed-wing extension</strong>
+      FLAME currently assumes rotary-wing (hovering). If you extend to fixed-wing follower UAVs (e.g., fixed-wing scouts covering larger areas), the minimum speed constraint V_min = √(2W/S / ρCL_max) becomes an additional trajectory constraint in the optimization. Fixed-wing cannot stop to hover during FL rounds — they must orbit, adding delay.
+    </div>
+    <div class="mini">
+      <strong>Hou et al. → FLAME channel model upgrade</strong>
+      FLAME uses a static channel gain g_i. The Hou et al. paper shows that even a hovering rotary-wing UAV introduces 963 Hz micro-Doppler from propeller rotation. This means g_i is not static but time-varying with period ≈6.5ms. For NOMA-based FL (your paper mentions NOMA), this is especially damaging as micro-Doppler distorts SIC ordering.
+    </div>
+    <div class="mini">
+      <strong>Pman(L) + hover physics connection</strong>
+      From Abeywickrama et al. (the empirical paper), hovering power P_hover = 236.62W baseline. From the textbook Eq.(3.7): v_i = k_n(p/2ρ)^0.5 is the induced velocity. The induced power P_i = k_n·T·v_i directly explains why Pman is the dominant energy term in FLAME — rotary-wing hover power is always "on" during FL training.
+    </div>
+    <div class="mini">
+      <strong>Minimum speed → communication model implication</strong>
+      Fixed-wing: must maintain V ≥ V_min ≈ 6–15 m/s → always a translation Doppler f_D = V·fc/c ≈ 6×2.5GHz/3×10⁸ = 50 Hz. Rotary-wing: V_airspeed = 0 but f_micro-Doppler = 963 Hz from propellers. The rotary-wing micro-Doppler (963 Hz) is 19× larger than typical translation Doppler for mini UAVs — justifying why Hou et al. argue it cannot be ignored.
+    </div>
+  </div>
+  <div class="card">
+    <p style="font-size:13px;font-weight:500;margin:0 0 8px">Citation text for your paper</p>
+    <div style="font-size:13px;color:var(--color-text-secondary);font-family:var(--font-mono);line-height:2;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px">
+"Rotary-wing UAVs can hover at zero airspeed, making them suitable
+for stationary FL data collection. However, even during hover,
+propeller rotation at f_m = 4620 RPM introduces micro-Doppler
+frequency shifts up to 963 Hz in sub-6 GHz channels [Hou et al.,
+IEEE WCL 2021], causing time-varying channel conditions that
+our current static channel model g_i does not capture. Addressing
+this dynamic channel effect is left as future work."
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function show(n){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  event.target.classList.add('active');
+  if(n==='compare') setTimeout(initCompare,50);
+  if(n==='fixedwing') setTimeout(initVmin,50);
+}
+
+function vmin(ws){ return Math.sqrt(2*ws/1.225); }
+
+let vChart=null;
+function initVmin(){
+  if(vChart){updateVmin();return;}
+  const ctx=document.getElementById('vminChart').getContext('2d');
+  const ws=Array.from({length:41},(_,i)=>i*5);
+  const vm=ws.map(w=>vmin(w));
+  vChart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:ws,
+      datasets:[
+        {label:'V_min (m/s)',data:vm,borderColor:'#534AB7',backgroundColor:'rgba(83,74,183,0.06)',tension:0.3,pointRadius:2,fill:true},
+        {label:'MAV range',data:ws.map(w=>(w>=5&&w<=50)?vmin(w):null),borderColor:'#D85A30',backgroundColor:'rgba(216,90,48,0.15)',tension:0.3,pointRadius:0,fill:true,borderWidth:2},
+        {label:'Mini UAV range',data:ws.map(w=>(w>=25&&w<=150)?vmin(w):null),borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.12)',tension:0.3,pointRadius:0,fill:true,borderWidth:2}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      scales:{
+        x:{title:{display:true,text:'Wing loading W/S (N/m²)'},ticks:{font:{size:11},maxTicksLimit:10}},
+        y:{title:{display:true,text:'V_min (m/s)'},min:0,max:20,ticks:{font:{size:11}}}
+      },
+      plugins:{legend:{labels:{font:{size:11}}}}
+    }
+  });
+  updateVmin();
+}
+
+function updateVmin(){
+  const ws=parseInt(document.getElementById('wl-sl').value);
+  document.getElementById('wl-v').textContent=ws+' N/m²';
+  const vm=vmin(ws);
+  let cls='';
+  if(ws>=5&&ws<=50) cls='MAV region';
+  else if(ws>=25&&ws<=150) cls='Mini UAV region';
+  else cls='Outside plotted UAV classes';
+  document.getElementById('vmin-metrics').innerHTML=
+    `<div class="mc"><div class="ml">Wing loading</div><div class="mv">${ws}</div><div class="mu">N/m²</div></div>`+
+    `<div class="mc"><div class="ml">V_min (stall)</div><div class="mv">${vm.toFixed(2)}</div><div class="mu">m/s</div></div>`+
+    `<div class="mc"><div class="ml">UAV class</div><div class="mv" style="font-size:14px">${cls}</div><div class="mu"> </div></div>`+
+    `<div class="mc"><div class="ml">vs rotary-wing</div><div class="mv" style="font-size:14px">${vm.toFixed(1)}× faster</div><div class="mu">than hover (0 m/s)</div></div>`;
+  if(vChart){
+    const markerIdx=Math.floor(ws/5);
+    vChart.data.datasets[0].pointBackgroundColor=vChart.data.datasets[0].data.map((_,i)=>i===markerIdx?'#D85A30':'#534AB7');
+    vChart.data.datasets[0].pointRadius=vChart.data.datasets[0].data.map((_,i)=>i===markerIdx?6:2);
+    vChart.update('none');
+  }
+}
+
+function updateDoppler(){
+  const fm=parseInt(document.getElementById('fm-sl').value);
+  const fc=parseFloat(document.getElementById('fc-sl').value);
+  document.getElementById('fm-v').textContent=fm+' RPM';
+  document.getElementById('fc-v').textContent=fc.toFixed(1)+' GHz';
+  const Dp=0.254, dant=0.200, c=3e8;
+  const fm_hz=fm/60;
+  const theta_rz=Math.asin(Dp/(4*dant));
+  const fD_max=4*Math.PI*fm_hz*dant*(fc*1e9)*Math.sin(2*theta_rz)/c;
+  const T_period=60/(fm*2)*1000;
+  const v_tip=Math.PI*Dp*fm_hz;
+  document.getElementById('doppler-metrics').innerHTML=
+    `<div class="mc"><div class="ml">Max micro-Doppler</div><div class="mv">${fD_max.toFixed(1)}</div><div class="mu">Hz</div></div>`+
+    `<div class="mc"><div class="ml">Blade tip speed</div><div class="mv">${v_tip.toFixed(1)}</div><div class="mu">m/s</div></div>`+
+    `<div class="mc"><div class="ml">Reflection period</div><div class="mv">${T_period.toFixed(2)}</div><div class="mu">ms</div></div>`+
+    `<div class="mc"><div class="ml">UAV airspeed</div><div class="mv" style="color:#1D9E75">0</div><div class="mu">m/s (hovering)</div></div>`;
+}
+updateDoppler();
+
+let cChart=null;
+function initCompare(){
+  if(cChart) return;
+  const ctx=document.getElementById('compareChart').getContext('2d');
+  const xs=Array.from({length:41},(_,i)=>i*5);
+  cChart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:xs,
+      datasets:[
+        {label:'Fixed-wing V_min',data:xs.map(w=>vmin(w)),borderColor:'#534AB7',tension:0.3,pointRadius:2,fill:false},
+        {label:'Rotary-wing V_min = 0 (hover)',data:xs.map(()=>0),borderColor:'#1D9E75',borderDash:[6,4],pointRadius:0,borderWidth:2,fill:false}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      scales:{
+        x:{title:{display:true,text:'Wing loading (N/m²) / index'},ticks:{font:{size:11},maxTicksLimit:8}},
+        y:{title:{display:true,text:'Minimum speed (m/s)'},min:0,max:20,ticks:{font:{size:11}}}
+      },
+      plugins:{legend:{labels:{font:{size:11}}}}
+    }
+  });
+}
+setTimeout(initVmin,100);
+</script>

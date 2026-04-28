@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Micro-Doppler Effect — Rotary-Wing UAV Sub-6 GHz</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0d1117;
+  color: #e6edf3;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 14px;
+  min-height: 100vh;
+}
+h1 {
+  font-size: 1.05rem;
+  color: #58a6ff;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 7px;
+  margin-bottom: 3px;
+  letter-spacing: 0.03em;
+}
+.subtitle {
+  font-size: 0.7rem;
+  color: #6e7681;
+  margin-bottom: 14px;
+}
+.layout {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+canvas {
+  display: block;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+}
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 370px;
+  max-width: 390px;
+}
+.card {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  padding: 11px 13px;
+}
+.card-title {
+  font-size: 0.65rem;
+  color: #6e7681;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 9px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+}
+.row label {
+  font-size: 0.72rem;
+  color: #8b949e;
+  min-width: 145px;
+}
+.row input[type=range] {
+  flex: 1;
+  accent-color: #388bfd;
+  cursor: pointer;
+}
+.row .val {
+  font-size: 0.72rem;
+  color: #e6edf3;
+  min-width: 75px;
+  text-align: right;
+}
+.readout-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 10px;
+}
+.ri {
+  display: flex;
+  flex-direction: column;
+}
+.ri-key {
+  font-size: 0.6rem;
+  color: #6e7681;
+  margin-bottom: 1px;
+}
+.ri-val {
+  font-size: 0.82rem;
+  color: #58a6ff;
+  font-weight: bold;
+}
+.ri-val.on  { color: #f0883e; }
+.ri-val.off { color: #3d444d; }
+.btn-row {
+  display: flex;
+  gap: 7px;
+  margin-top: 4px;
+}
+button {
+  padding: 5px 14px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #e6edf3;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+button:hover { background: #30363d; }
+button.primary { background: #1c3559; border-color: #388bfd; color: #58a6ff; }
+button.primary:hover { background: #1f6feb; color: #fff; }
+.eq-note {
+  font-size: 0.62rem;
+  color: #3d444d;
+  margin-top: 6px;
+}
+</style>
+</head>
+<body>
+
+<h1>Micro-Doppler Effect in Rotary-Wing UAV Sub-6 GHz Communications</h1>
+<div class="subtitle">
+  Hou, H.-A., Wang, L.-C., &amp; Lin, H.-P. — IEEE Wireless Comm. Letters, Vol.&nbsp;10, No.&nbsp;10, Oct.&nbsp;2021 &nbsp;|&nbsp; DOI: 10.1109/LWC.2021.3095898
+</div>
+
+<div class="layout">
+
+  <!-- ── LEFT: System Model Canvas ───────────────────────────── -->
+  <canvas id="sysCanvas" width="690" height="460"></canvas>
+
+  <!-- ── RIGHT: Panel ─────────────────────────────────────────── -->
+  <div class="right-panel">
+
+    <!-- Frequency waveform -->
+    <canvas id="freqCanvas" width="370" height="195"></canvas>
+
+    <!-- Live readouts -->
+    <div class="card">
+      <div class="card-title">Live Measurements</div>
+      <div class="readout-grid">
+        <div class="ri"><span class="ri-key">Blade angle θ_e</span><span class="ri-val" id="rdTheta">—</span></div>
+        <div class="ri"><span class="ri-key">f_D (active reflection)</span><span class="ri-val" id="rdFD">—</span></div>
+        <div class="ri"><span class="ri-key">Max |f_D|  [eq. 5]</span><span class="ri-val" id="rdFDmax">—</span></div>
+        <div class="ri"><span class="ri-key">Zone half-angle θ_rz</span><span class="ri-val" id="rdThrz">—</span></div>
+        <div class="ri"><span class="ri-key">Blade cycle period</span><span class="ri-val" id="rdPeriod">—</span></div>
+        <div class="ri"><span class="ri-key">Reflection duration</span><span class="ri-val" id="rdRefDur">—</span></div>
+        <div class="ri" style="grid-column:span 2">
+          <span class="ri-key">Reflection status</span>
+          <span class="ri-val off" id="rdStatus">○ INACTIVE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="card">
+      <div class="card-title">Parameters  (Table I &amp; II — Hou et al. 2021)</div>
+
+      <div class="row">
+        <label>Motor speed  f_m (RPM)</label>
+        <input type="range" id="slFm" min="1000" max="8000" step="100" value="4620">
+        <span class="val" id="vlFm">4620 rpm</span>
+      </div>
+      <div class="row">
+        <label>Carrier freq  f_c (GHz)</label>
+        <input type="range" id="slFc" min="0.5" max="6.0" step="0.1" value="2.5">
+        <span class="val" id="vlFc">2.50 GHz</span>
+      </div>
+      <div class="row">
+        <label>Prop. diameter  D_p (mm)</label>
+        <input type="range" id="slDp" min="80" max="500" step="5" value="254">
+        <span class="val" id="vlDp">254 mm</span>
+      </div>
+      <div class="row">
+        <label>Ant. offset  d_ant (mm)</label>
+        <input type="range" id="slDant" min="50" max="500" step="5" value="200">
+        <span class="val" id="vlDant">200 mm</span>
+      </div>
+      <div class="row">
+        <label>Num. blades  N_b</label>
+        <input type="range" id="slNb" min="1" max="4" step="1" value="2">
+        <span class="val" id="vlNb">2 blades</span>
+      </div>
+      <div class="row">
+        <label>Anim. time scale</label>
+        <input type="range" id="slSpeed" min="5" max="500" step="5" value="80">
+        <span class="val" id="vlSpeed">80×</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="primary" id="btnPlay">⏸ PAUSE</button>
+        <button id="btnReset">↺ RESET</button>
+      </div>
+      <div class="eq-note">
+        f_D(t) = −4π f_m d_ant f_c sin(2θ_e(t)) / c &nbsp;[eq. 5] &nbsp;|&nbsp;
+        θ_rz = arcsin(D_p / (4 d_ant)) &nbsp;[eq. 4]
+      </div>
+    </div>
+
+  </div><!-- /right-panel -->
+</div><!-- /layout -->
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<script>
+"use strict";
+
+// ── Physical constants ───────────────────────────────────────────
+const C_LIGHT = 3e8;   // speed of light [m/s]
+
+// ── Mutable simulation parameters ───────────────────────────────
+const P = {
+  fm:   4620,   // motor RPM
+  fc:   2.5e9,  // carrier frequency [Hz]
+  Dp:   0.254,  // propeller diameter [m]
+  dant: 0.200,  // antenna-to-hub distance [m]
+  dUE:  1000,   // UE distance [m]
+  Nb:   2,      // number of blades
+};
+
+let simTime   = 0;      // accumulated simulation time [s]
+let animSpeed = 80;     // simulation seconds per wall-clock second
+let playing   = true;
+let lastWall  = null;
+
+// ── Derived physics ──────────────────────────────────────────────
+const fm_hz  = () => P.fm / 60;
+const thetaRz = () => Math.asin(Math.min(P.Dp / (4 * P.dant), 1.0));
+const bladePeriod = () => 1.0 / (fm_hz() * P.Nb);   // period between successive reflections
+const reflDuration = () => 2 * thetaRz() * bladePeriod() / Math.PI;
+// Maximum |f_D| at zone boundary θ_e = ±θ_rz (blade only active in zone)
+// Paper reports ≈ 963 Hz for default params  [eq. 5 evaluated at θ_rz]
+const maxDoppler = () => 4 * Math.PI * fm_hz() * P.dant * P.fc
+                         * Math.abs(Math.sin(2 * thetaRz())) / C_LIGHT;
+
+// blade angle for blade index m at time t  [eq. 1]
+function bladeAngle(t, m) {
+  return 2 * Math.PI * fm_hz() * t + (2 * m * Math.PI / P.Nb) - Math.PI / 2;
+}
+
+// micro-Doppler instantaneous frequency  [eq. 5]
+function microDoppler(theta_e) {
+  return -4 * Math.PI * fm_hz() * P.dant * P.fc * Math.sin(2 * theta_e) / C_LIGHT;
+}
+
+// Wrap angle to (−π, π]
+function wrapPi(a) {
+  a = a % (2 * Math.PI);
+  if (a >  Math.PI) a -= 2 * Math.PI;
+  if (a <= -Math.PI) a += 2 * Math.PI;
+  return a;
+}
+
+// Returns {active:bool, theta_active:number, blade_idx:int} for the currently reflecting blade
+function reflectionState(t) {
+  const thrz = thetaRz();
+  for (let m = 0; m < P.Nb; m++) {
+    const raw = bladeAngle(t, m);
+    const te  = wrapPi(raw);
+    if (Math.abs(te) < thrz) {
+      return { active: true, theta_active: te, blade_idx: m, raw_angle: raw };
+    }
+  }
+  return { active: false, theta_active: 0, blade_idx: -1, raw_angle: bladeAngle(t, 0) };
+}
+
+// ── Canvas references ────────────────────────────────────────────
+const SC  = document.getElementById('sysCanvas');
+const FC  = document.getElementById('freqCanvas');
+const sct = SC.getContext('2d');
+const fct = FC.getContext('2d');
+const SW  = SC.width, SH = SC.height;
+const FW  = FC.width, FH = FC.height;
+
+// ── Layout constants for system canvas ──────────────────────────
+// UAV drawn at upper-right; UE at lower-left; detail inset at lower-right
+const UAV = { cx: 480, cy: 185, bodyR: 22, armLen: 78 };
+const UE  = { x: 82, y: 390 };
+const ANT = { x: UAV.cx, y: UAV.cy + 62 };   // antenna A (below hub O)
+// Propeller detail inset center
+const INS = { cx: 155, cy: 335, r: 88 };
+
+// Arm directions for X-frame quad (degrees from 3 o'clock)
+const ARM_ANGLES = [45, 135, 225, 315].map(d => d * Math.PI / 180);
+// CW / CCW alternation for torque balance
+const ARM_DIR = [1, -1, 1, -1];
+
+// ── Draw: Sky + Ground ───────────────────────────────────────────
+function drawBG() {
+  const grad = sct.createLinearGradient(0, 0, 0, SH);
+  grad.addColorStop(0.0, '#070d18');
+  grad.addColorStop(0.7, '#0c1a2e');
+  grad.addColorStop(1.0, '#111827');
+  sct.fillStyle = grad;
+  sct.fillRect(0, 0, SW, SH);
+
+  // Subtle ground strip
+  sct.fillStyle = '#0b1a0b';
+  sct.fillRect(0, SH * 0.86, SW, SH * 0.14);
+  sct.strokeStyle = '#1a3d1a';
+  sct.lineWidth = 1;
+  sct.beginPath(); sct.moveTo(0, SH * 0.86); sct.lineTo(SW, SH * 0.86); sct.stroke();
+
+  // Stars
+  sct.fillStyle = 'rgba(255,255,255,0.35)';
+  [[40,22],[110,48],[185,18],[265,38],[370,12],[430,44],[530,22],[615,55],[655,30]].forEach(([x,y]) => {
+    sct.beginPath(); sct.arc(x, y, 1.1, 0, Math.PI * 2); sct.fill();
+  });
+}
+
+// ── Draw: UAV body + arms (top-down schematic) ───────────────────
+function drawUAVBody() {
+  const { cx, cy, bodyR, armLen } = UAV;
+  sct.save();
+  sct.translate(cx, cy);
+
+  // Arms
+  sct.strokeStyle = '#374151'; sct.lineWidth = 7; sct.lineCap = 'round';
+  ARM_ANGLES.forEach(a => {
+    sct.beginPath(); sct.moveTo(0, 0);
+    sct.lineTo(armLen * Math.cos(a), armLen * Math.sin(a));
+    sct.stroke();
+  });
+
+  // Body
+  sct.fillStyle = '#1f2937'; sct.strokeStyle = '#374151'; sct.lineWidth = 1.5;
+  sct.beginPath(); sct.roundRect(-bodyR, -bodyR, bodyR*2, bodyR*2, 5); sct.fill(); sct.stroke();
+
+  // Center cross
+  sct.strokeStyle = '#4b5563'; sct.lineWidth = 1;
+  sct.beginPath(); sct.moveTo(-8,0); sct.lineTo(8,0); sct.moveTo(0,-8); sct.lineTo(0,8); sct.stroke();
+
+  sct.restore();
+}
+
+// ── Draw: Propeller discs + spinning blades on each arm ──────────
+function drawPropellers(t, reflState) {
+  const { cx, cy, armLen } = UAV;
+  const blade0_angle = bladeAngle(t, 0);  // master angle
+
+  ARM_ANGLES.forEach((a, arm) => {
+    const px = cx + armLen * Math.cos(a);
+    const py = cy + armLen * Math.sin(a);
+    const discR = 32;
+
+    // Disc glow
+    sct.beginPath(); sct.arc(px, py, discR, 0, Math.PI * 2);
+    sct.fillStyle = 'rgba(88,166,255,0.04)'; sct.fill();
+    sct.strokeStyle = '#1e3a5f'; sct.lineWidth = 1;
+    sct.stroke();
+
+    // Motor hub
+    sct.fillStyle = '#4b5563';
+    sct.beginPath(); sct.arc(px, py, 5, 0, Math.PI * 2); sct.fill();
+
+    // Blades for this arm
+    const dir = ARM_DIR[arm];
+    for (let m = 0; m < P.Nb; m++) {
+      const raw = blade0_angle * dir + (2 * m * Math.PI / P.Nb);
+      const tipX = px + discR * Math.cos(raw);
+      const tipY = py + discR * Math.sin(raw);
+      const tailX = px - discR * Math.cos(raw);
+      const tailY = py - discR * Math.sin(raw);
+
+      // Highlight reflecting blade
+      const isActive = reflState.active && arm === 1; // arm 1 = upper-left, closest to UE
+      sct.strokeStyle = isActive ? '#f0883e' : '#4fc3f7';
+      sct.lineWidth   = isActive ? 3 : 1.5;
+      if (isActive) { sct.shadowColor = '#f0883e'; sct.shadowBlur = 8; }
+      sct.beginPath(); sct.moveTo(tailX, tailY); sct.lineTo(tipX, tipY); sct.stroke();
+      sct.shadowBlur = 0;
+    }
+  });
+}
+
+// ── Draw: Signal paths ───────────────────────────────────────────
+function drawSignalPaths(t, reflState) {
+  // Direct path  (always on, blue dashed)
+  sct.save();
+  sct.setLineDash([7, 5]);
+  sct.strokeStyle = 'rgba(88,166,255,0.55)';
+  sct.lineWidth = 1.5;
+  sct.beginPath(); sct.moveTo(UE.x + 18, UE.y); sct.lineTo(ANT.x, ANT.y); sct.stroke();
+  sct.restore();
+
+  // Label: direct
+  sct.fillStyle = 'rgba(88,166,255,0.5)';
+  sct.font = '9px Courier New'; sct.textAlign = 'center';
+  const dmx = (UE.x + ANT.x) / 2, dmy = (UE.y + ANT.y) / 2;
+  sct.fillText('direct path', dmx + 10, dmy - 14);
+  sct.textAlign = 'left';
+
+  // Reflection path (orange, only when active)
+  if (reflState.active) {
+    // Blade tip on arm 1 (upper-left arm = closest to UE direction)
+    const arm = 1;
+    const a = ARM_ANGLES[arm];
+    const px = UAV.cx + UAV.armLen * Math.cos(a);
+    const py = UAV.cy + UAV.armLen * Math.sin(a);
+    const dir = ARM_DIR[arm];
+    const raw = bladeAngle(t, 0) * dir;
+    const tipX = px + 32 * Math.cos(raw);
+    const tipY = py + 32 * Math.sin(raw);
+
+    sct.save();
+    sct.shadowColor = '#f0883e'; sct.shadowBlur = 10;
+    sct.strokeStyle = '#f0883e'; sct.lineWidth = 2;
+    sct.beginPath();
+    sct.moveTo(UE.x + 18, UE.y);
+    sct.lineTo(tipX, tipY);
+    sct.lineTo(ANT.x, ANT.y);
+    sct.stroke();
+    sct.restore();
+
+    // Moving photon dots along path
+    const phase = (t * 1.8) % 1.0;
+    // Segment 1: UE → blade tip
+    const p1x = UE.x + 18 + (tipX - UE.x - 18) * phase;
+    const p1y = UE.y + (tipY - UE.y) * phase;
+    // Segment 2: blade tip → ANT
+    const p2x = tipX + (ANT.x - tipX) * phase;
+    const p2y = tipY + (ANT.y - tipY) * phase;
+
+    [{ x: p1x, y: p1y }, { x: p2x, y: p2y }].forEach(pt => {
+      sct.fillStyle = '#fbbf24';
+      sct.beginPath(); sct.arc(pt.x, pt.y, 3, 0, Math.PI * 2); sct.fill();
+    });
+
+    // Label: reflection
+    sct.fillStyle = '#f0883e'; sct.font = '9px Courier New'; sct.textAlign = 'center';
+    sct.fillText('reflection path', (UE.x + tipX) / 2 + 5, (UE.y + tipY) / 2 - 10);
+    sct.textAlign = 'left';
+  }
+}
+
+// ── Draw: UE icon ────────────────────────────────────────────────
+function drawUE() {
+  const { x, y } = UE;
+  sct.strokeStyle = '#388bfd'; sct.lineWidth = 2;
+  // Vertical mast
+  sct.beginPath(); sct.moveTo(x, y); sct.lineTo(x, y + 22); sct.stroke();
+  // Base
+  sct.beginPath(); sct.moveTo(x - 10, y + 22); sct.lineTo(x + 10, y + 22); sct.stroke();
+  // Signal arcs
+  [10, 18, 27].forEach((r, i) => {
+    sct.globalAlpha = 0.15 + 0.15 * i;
+    sct.beginPath(); sct.arc(x, y, r, -Math.PI * 0.72, -Math.PI * 0.28); sct.stroke();
+  });
+  sct.globalAlpha = 1;
+  sct.fillStyle = '#6e7681'; sct.font = '9px Courier New';
+  sct.fillText('Ground UE', x - 26, y + 36);
+  sct.fillText('d_UE = 1000 m', x - 26, y + 47);
+}
+
+// ── Draw: Antenna marker ─────────────────────────────────────────
+function drawAntenna(reflState) {
+  const { x, y } = ANT;
+  const glow = reflState.active;
+  if (glow) { sct.shadowColor = '#f0883e'; sct.shadowBlur = 12; }
+  sct.fillStyle = glow ? '#f0883e' : '#58a6ff';
+  sct.beginPath(); sct.arc(x, y, 5, 0, Math.PI * 2); sct.fill();
+  sct.shadowBlur = 0;
+  sct.fillStyle = '#6e7681'; sct.font = '9px Courier New';
+  sct.fillText('A (UAV antenna)', x + 9, y + 4);
+
+  // dant label (vertical dotted line from O to A)
+  sct.strokeStyle = '#2d3748'; sct.lineWidth = 1;
+  sct.setLineDash([3, 3]);
+  sct.beginPath(); sct.moveTo(UAV.cx, UAV.cy); sct.lineTo(ANT.x, ANT.y); sct.stroke();
+  sct.setLineDash([]);
+  sct.fillStyle = '#374151'; sct.font = '8px Courier New';
+  sct.fillText(' d_ant', UAV.cx + 4, (UAV.cy + ANT.y) / 2 + 3);
+}
+
+// ── Draw: Propeller detail inset (top-down) ──────────────────────
+function drawInset(t, reflState) {
+  const { cx, cy, r } = INS;
+  const pad = 22;
+
+  // Box background
+  sct.fillStyle = 'rgba(7,13,24,0.88)';
+  sct.strokeStyle = '#21262d'; sct.lineWidth = 1;
+  sct.beginPath(); sct.roundRect(cx - r - pad, cy - r - pad, 2*(r+pad), 2*(r+pad), 6);
+  sct.fill(); sct.stroke();
+
+  // Title
+  sct.fillStyle = '#3d444d'; sct.font = '8px Courier New';
+  sct.textAlign = 'center';
+  sct.fillText('Propeller — top-down view', cx, cy - r - pad + 13);
+
+  // Reflection zone sectors (orange highlight for ±θ_rz from UE direction)
+  // UE is to the LEFT → UE direction in canvas = angle π  (pointing left)
+  const thrz = thetaRz();
+  const zones = [Math.PI, 0];   // left (UE dir) and right (opposite blade tip)
+  zones.forEach(center => {
+    sct.fillStyle = 'rgba(240,136,62,0.12)';
+    sct.strokeStyle = 'rgba(240,136,62,0.45)'; sct.lineWidth = 1;
+    sct.beginPath(); sct.moveTo(cx, cy);
+    sct.arc(cx, cy, r, center - thrz, center + thrz); sct.closePath();
+    sct.fill(); sct.stroke();
+  });
+
+  // Disc boundary
+  sct.strokeStyle = '#1e3a5f'; sct.lineWidth = 1;
+  sct.beginPath(); sct.arc(cx, cy, r, 0, Math.PI * 2); sct.stroke();
+
+  // Grid cross-hair
+  sct.strokeStyle = '#1c2128'; sct.lineWidth = 1;
+  sct.beginPath(); sct.moveTo(cx - r, cy); sct.lineTo(cx + r, cy);
+  sct.moveTo(cx, cy - r); sct.lineTo(cx, cy + r); sct.stroke();
+
+  // UE direction arrow (from left)
+  sct.strokeStyle = '#388bfd'; sct.fillStyle = '#388bfd'; sct.lineWidth = 1.5;
+  sct.setLineDash([4, 3]);
+  sct.beginPath(); sct.moveTo(cx - r - pad + 6, cy); sct.lineTo(cx - r - 2, cy); sct.stroke();
+  sct.setLineDash([]);
+  // arrowhead
+  sct.beginPath(); sct.moveTo(cx - r - 2, cy);
+  sct.lineTo(cx - r - 10, cy - 5); sct.lineTo(cx - r - 10, cy + 5); sct.closePath();
+  sct.fill();
+  sct.fillStyle = '#388bfd'; sct.font = '8px Courier New';
+  sct.textAlign = 'center';
+  sct.fillText('UE', cx - r - pad/2, cy - 9);
+
+  // Blades (master blade angle drives the inset)
+  const masterAngle = bladeAngle(t, 0);
+  for (let m = 0; m < P.Nb; m++) {
+    const bAngle = masterAngle + (2 * m * Math.PI / P.Nb);
+    const bAngleW = wrapPi(bAngle);
+    const inRefl  = Math.abs(bAngleW) < thrz;
+
+    const tx = cx + r * Math.cos(bAngle);
+    const ty = cy + r * Math.sin(bAngle);
+    const bx = cx - r * Math.cos(bAngle);
+    const by = cy - r * Math.sin(bAngle);
+
+    sct.strokeStyle = inRefl ? '#f0883e' : '#4fc3f7';
+    sct.lineWidth   = inRefl ? 3 : 1.8;
+    if (inRefl) { sct.shadowColor = '#f0883e'; sct.shadowBlur = 8; }
+    sct.beginPath(); sct.moveTo(bx, by); sct.lineTo(tx, ty); sct.stroke();
+    sct.shadowBlur = 0;
+
+    // Blade tip dots
+    sct.fillStyle = inRefl ? '#f0883e' : '#4fc3f7';
+    sct.beginPath(); sct.arc(tx, ty, 3, 0, Math.PI * 2); sct.fill();
+    sct.beginPath(); sct.arc(bx, by, 3, 0, Math.PI * 2); sct.fill();
+  }
+
+  // Hub
+  const hubColor = reflState.active ? '#f0883e' : '#4fc3f7';
+  sct.fillStyle = hubColor;
+  sct.beginPath(); sct.arc(cx, cy, 5, 0, Math.PI * 2); sct.fill();
+
+  // Zone label
+  sct.fillStyle = 'rgba(240,136,62,0.7)'; sct.font = '8px Courier New';
+  sct.textAlign = 'center';
+  sct.fillText('±θ_rz = ±' + (thrz * 180 / Math.PI).toFixed(1) + '°', cx, cy - r + 12);
+
+  // θ_e label on active blade
+  if (reflState.active) {
+    const bAngle = masterAngle + (2 * reflState.blade_idx * Math.PI / P.Nb);
+    const lx = cx + (r * 0.55) * Math.cos(bAngle);
+    const ly = cy + (r * 0.55) * Math.sin(bAngle);
+    sct.fillStyle = '#f0883e'; sct.font = 'bold 9px Courier New';
+    sct.fillText('θ_e=' + reflState.theta_active.toFixed(2), lx, ly - 7);
+  }
+
+  sct.textAlign = 'left';
+}
+
+// ── Draw: Info overlay ───────────────────────────────────────────
+function drawInfoOverlay(reflState) {
+  sct.fillStyle = 'rgba(7,13,24,0.82)';
+  sct.strokeStyle = '#21262d'; sct.lineWidth = 1;
+  sct.beginPath(); sct.roundRect(SW - 215, 10, 202, 100, 5); sct.fill(); sct.stroke();
+
+  sct.font = '10px Courier New';
+  const rows = [
+    ['f_m =', (P.fm).toFixed(0) + ' rpm', '#6e7681', '#c9d1d9'],
+    ['f_c =', (P.fc / 1e9).toFixed(2) + ' GHz', '#6e7681', '#c9d1d9'],
+    ['|f_D|_max =', maxDoppler().toFixed(1) + ' Hz', '#6e7681', '#58a6ff'],
+    ['θ_rz =', '±' + (thetaRz() * 180 / Math.PI).toFixed(1) + '°', '#6e7681', '#c9d1d9'],
+    ['Status:', reflState.active ? '● ACTIVE' : '○ INACTIVE', '#6e7681',
+                reflState.active ? '#f0883e' : '#3d444d'],
+  ];
+  rows.forEach(([k, v, kc, vc], i) => {
+    sct.fillStyle = kc; sct.fillText(k, SW - 210, 28 + i * 17);
+    sct.fillStyle = vc; sct.fillText(v, SW - 140, 28 + i * 17);
+  });
+}
+
+// ── Draw: Frequency canvas ───────────────────────────────────────
+function drawFreq(currentT) {
+  fct.fillStyle = '#0d1117';
+  fct.fillRect(0, 0, FW, FH);
+  fct.strokeStyle = '#21262d'; fct.lineWidth = 1;
+  fct.strokeRect(0.5, 0.5, FW - 1, FH - 1);
+
+  const ml = 58, mr = 12, mt = 28, mb = 30;
+  const pw = FW - ml - mr, ph = FH - mt - mb;
+
+  const fMax  = maxDoppler();
+  const T_one = bladePeriod();  // one reflection period
+  const nShow = 1.6;            // number of periods to display
+  const tEnd  = T_one * nShow;
+
+  const fy = f  => mt + ph / 2 - f / (fMax * 1.15) * (ph / 2);
+  const tx = tt => ml + (tt / tEnd) * pw;
+
+  // Grid lines
+  const gridFs = [fMax, fMax * 0.5, 0, -fMax * 0.5, -fMax];
+  gridFs.forEach(f => {
+    fct.strokeStyle = f === 0 ? '#21262d' : '#161b22';
+    fct.lineWidth = f === 0 ? 1.5 : 1;
+    fct.setLineDash(f === 0 ? [] : [4, 5]);
+    fct.beginPath(); fct.moveTo(ml, fy(f)); fct.lineTo(ml + pw, fy(f)); fct.stroke();
+  });
+  fct.setLineDash([]);
+
+  // Shade reflection-active windows
+  const N_SAMPLE = 600;
+  let shading = false;
+  let shadeStart = 0;
+  for (let i = 0; i <= N_SAMPLE; i++) {
+    const tt = (i / N_SAMPLE) * tEnd;
+    const te0 = bladeAngle(tt, 0);
+    let inZ = false;
+    for (let m = 0; m < P.Nb; m++) {
+      const te = wrapPi(bladeAngle(tt, m));
+      if (Math.abs(te) < thetaRz()) { inZ = true; break; }
+    }
+    if (inZ && !shading) { shadeStart = tx(tt); shading = true; }
+    if (!inZ && shading) {
+      fct.fillStyle = 'rgba(240,136,62,0.07)';
+      fct.fillRect(shadeStart, mt, tx(tt) - shadeStart, ph);
+      shading = false;
+    }
+  }
+  if (shading) {
+    fct.fillStyle = 'rgba(240,136,62,0.07)';
+    fct.fillRect(shadeStart, mt, ml + pw - shadeStart, ph);
+  }
+
+  // Draw curve: blue (zero / inactive), orange (active)
+  const drawSegment = (pts, color, lw, glow) => {
+    if (pts.length < 2) return;
+    fct.strokeStyle = color; fct.lineWidth = lw;
+    if (glow) { fct.shadowColor = color; fct.shadowBlur = 5; }
+    fct.beginPath();
+    pts.forEach((p, i) => i === 0 ? fct.moveTo(p.x, p.y) : fct.lineTo(p.x, p.y));
+    fct.stroke();
+    fct.shadowBlur = 0;
+  };
+
+  let inactivePts = [], activePts = [];
+  const zero_y = fy(0);
+
+  for (let i = 0; i <= N_SAMPLE; i++) {
+    const tt  = (i / N_SAMPLE) * tEnd;
+    let active = false, te_active = 0;
+    for (let m = 0; m < P.Nb; m++) {
+      const te = wrapPi(bladeAngle(tt, m));
+      if (Math.abs(te) < thetaRz()) { active = true; te_active = te; break; }
+    }
+    const fD  = active ? microDoppler(te_active) : 0;
+    const x   = tx(tt), y = fy(fD);
+
+    if (active) {
+      if (inactivePts.length) { drawSegment(inactivePts, '#1e3a5f', 1.5, false); inactivePts = []; }
+      activePts.push({ x, y });
+    } else {
+      if (activePts.length) { drawSegment(activePts, '#f0883e', 2.2, true); activePts = []; }
+      inactivePts.push({ x, y: zero_y });
+    }
+  }
+  if (inactivePts.length) drawSegment(inactivePts, '#1e3a5f', 1.5, false);
+  if (activePts.length)   drawSegment(activePts, '#f0883e', 2.2, true);
+
+  // Current time cursor
+  const tCur = currentT % tEnd;
+  fct.strokeStyle = '#3fb950'; fct.lineWidth = 1.2;
+  fct.setLineDash([4, 4]);
+  fct.beginPath(); fct.moveTo(tx(tCur), mt); fct.lineTo(tx(tCur), mt + ph); fct.stroke();
+  fct.setLineDash([]);
+
+  // Cursor dot
+  let fD_cur = 0, active_cur = false;
+  for (let m = 0; m < P.Nb; m++) {
+    const te = wrapPi(bladeAngle(currentT % tEnd, m));
+    if (Math.abs(te) < thetaRz()) { fD_cur = microDoppler(te); active_cur = true; break; }
+  }
+  fct.fillStyle = active_cur ? '#f0883e' : '#3fb950';
+  fct.beginPath(); fct.arc(tx(tCur), fy(fD_cur), 4, 0, Math.PI * 2); fct.fill();
+
+  // Axes
+  fct.strokeStyle = '#21262d'; fct.lineWidth = 1;
+  fct.beginPath();
+  fct.moveTo(ml, mt); fct.lineTo(ml, mt + ph); fct.lineTo(ml + pw, mt + ph);
+  fct.stroke();
+
+  // Y-axis tick labels
+  fct.fillStyle = '#6e7681'; fct.font = '9px Courier New'; fct.textAlign = 'right';
+  gridFs.forEach(f => fct.fillText(f.toFixed(0), ml - 4, fy(f) + 3));
+
+  // X-axis tick labels
+  fct.textAlign = 'center';
+  for (let k = 0; k <= nShow; k += 0.5) {
+    const tt = k * T_one;
+    const x  = tx(tt);
+    fct.strokeStyle = '#21262d'; fct.lineWidth = 1;
+    fct.beginPath(); fct.moveTo(x, mt + ph); fct.lineTo(x, mt + ph + 4); fct.stroke();
+    fct.fillStyle = '#6e7681';
+    fct.fillText((tt * 1000).toFixed(2) + 'ms', x, mt + ph + 13);
+  }
+
+  // Axis labels
+  fct.fillStyle = '#6e7681'; fct.font = '9px Courier New';
+  fct.save(); fct.translate(12, mt + ph / 2); fct.rotate(-Math.PI / 2);
+  fct.textAlign = 'center'; fct.fillText('f_D (Hz)  [eq. 5]', 0, 0); fct.restore();
+  fct.textAlign = 'center';
+  fct.fillText('simulation time', ml + pw / 2, FH - 5);
+
+  // Title
+  fct.fillStyle = '#58a6ff'; fct.font = 'bold 10px Courier New'; fct.textAlign = 'left';
+  fct.fillText('Micro-Doppler  f_D(t)', ml + 2, mt - 10);
+
+  // Legend
+  fct.fillStyle = '#f0883e'; fct.fillText('— reflection active', ml + 155, mt - 10);
+  fct.fillStyle = '#1e5c8b'; fct.fillText('— inactive (f_D = 0)', ml + 310, mt - 10);
+}
+
+// ── DOM readout updates ──────────────────────────────────────────
+function updateDOM(reflState) {
+  const fD = reflState.active ? microDoppler(reflState.theta_active) : 0;
+
+  document.getElementById('rdTheta').textContent =
+    wrapPi(reflState.raw_angle).toFixed(3) + ' rad  (' +
+    (wrapPi(reflState.raw_angle) * 180 / Math.PI).toFixed(1) + '°)';
+
+  const fdEl = document.getElementById('rdFD');
+  fdEl.textContent = (reflState.active ? fD.toFixed(1) : '0') + ' Hz';
+  fdEl.className = 'ri-val ' + (reflState.active ? 'on' : 'off');
+
+  document.getElementById('rdFDmax').textContent = maxDoppler().toFixed(1) + ' Hz';
+  document.getElementById('rdThrz').textContent =
+    '±' + (thetaRz() * 180 / Math.PI).toFixed(1) + '°  (±' + thetaRz().toFixed(3) + ' rad)';
+  document.getElementById('rdPeriod').textContent = (bladePeriod() * 1000).toFixed(3) + ' ms';
+  document.getElementById('rdRefDur').textContent = (reflDuration() * 1000).toFixed(3) + ' ms';
+
+  const stEl = document.getElementById('rdStatus');
+  stEl.textContent = reflState.active ? '● ACTIVE' : '○ INACTIVE';
+  stEl.className = 'ri-val ' + (reflState.active ? 'on' : 'off');
+}
+
+// ── Main animation loop ──────────────────────────────────────────
+function frame(wallTs) {
+  if (lastWall === null) lastWall = wallTs;
+  const wallDt = (wallTs - lastWall) / 1000;  // wall-clock seconds elapsed
+  lastWall = wallTs;
+
+  if (playing) simTime += wallDt * animSpeed;
+
+  const rs = reflectionState(simTime);
+
+  // System canvas
+  drawBG();
+  drawSignalPaths(simTime, rs);
+  drawUAVBody();
+  drawPropellers(simTime, rs);
+  drawAntenna(rs);
+  drawUE();
+  drawInset(simTime, rs);
+  drawInfoOverlay(rs);
+
+  // Frequency canvas
+  drawFreq(simTime);
+
+  // DOM
+  updateDOM(rs);
+
+  requestAnimationFrame(frame);
+}
+
+// ── Controls wiring ──────────────────────────────────────────────
+function wire(id, valId, unit, setter, disp) {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    const v = parseFloat(el.value);
+    setter(v);
+    document.getElementById(valId).textContent = disp(v) + unit;
+  });
+}
+
+wire('slFm',    'vlFm',    ' rpm',  v => { P.fm   = v; },           v => v.toFixed(0));
+wire('slFc',    'vlFc',    ' GHz',  v => { P.fc   = v * 1e9; },     v => v.toFixed(2));
+wire('slDp',    'vlDp',    ' mm',   v => { P.Dp   = v / 1000; },    v => v.toFixed(0));
+wire('slDant',  'vlDant',  ' mm',   v => { P.dant = v / 1000; },    v => v.toFixed(0));
+wire('slNb',    'vlNb',    ' blades', v => { P.Nb  = Math.round(v); }, v => Math.round(v).toFixed(0));
+wire('slSpeed', 'vlSpeed', '×',     v => { animSpeed = v; },         v => v.toFixed(0));
+
+document.getElementById('btnPlay').addEventListener('click', function () {
+  playing = !playing;
+  this.textContent = playing ? '⏸ PAUSE' : '▶ PLAY';
+  this.className   = playing ? 'primary' : '';
+  lastWall = null;
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  simTime = 0; lastWall = null;
+});
+
+// ── Kick off ─────────────────────────────────────────────────────
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

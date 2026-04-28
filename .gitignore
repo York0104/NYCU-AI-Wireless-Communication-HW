@@ -48,3 +48,17 @@ Exercise_2_4/QuaDRiGa-main/
 
 Exercise_2_7/dnn_ce/
 Exercise_2_7/tools/channel_*.npy
+
+
+# =========================
+# MidTerm_Q2
+# =========================
+MidTerm_Q2/.venv/
+MidTerm_Q2/__pycache__/
+
+
+# =========================
+# MidTerm_Q7
+# =========================
+MidTerm_Q7/__pycache__/
+MidTerm_Q7/.venv/_/

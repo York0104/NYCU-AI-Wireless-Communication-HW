@@ -1,92 +1,328 @@
-# Exercise 2.15: CSI Compression and Reconstruction using CsiNet and CS-CsiNet
+﻿# MidTerm Q7 - Exercise 2.15: CsiNet Generalization on COST2100 Channel Datasets
 
-This repository implements two neural network models (CsiNet and CS-CsiNet) for Channel State Information (CSI) compression and reconstruction in wireless communication systems. Both models support indoor/outdoor wireless environments, adjustable compression rates, and provide complete training & inference pipelines with performance evaluation and visualization.
+## 1. Project Overview
 
-## Completed Exercise 2.15 Solution
+This project completes **Exercise 2.15**, which studies how a trained CsiNet model performs on channel datasets different from its original training distribution. The experiment uses the official **COST2100 MATLAB channel model** to generate multiple channel datasets with different user distributions, evaluates CsiNet reconstruction NMSE on each dataset, and compares single-dataset training with mixed-dataset training.
 
-This workspace also includes a complete Exercise 2.15 experiment pipeline:
+The key question is whether a deep-learning-based CSI feedback model can generalize to practical channel variations. The result shows that a CsiNet model trained on only one indoor distribution performs poorly under outdoor domain shift, while mixed-dataset training improves NMSE on all test datasets.
 
-| File | Purpose |
-|------|---------|
-| `scripts/exercise_2_15_datasets.py` | Generates six COST-2100-style channel datasets with different user distributions. |
-| `scripts/run_exercise_2_15_tf.py` | Runs the TensorFlow/Keras CsiNet single-dataset and mixed-dataset experiment. |
-| `scripts/run_exercise_2_15_fast.py` | Runs a CPU-only PCA autoencoder proxy to verify the full pipeline when TensorFlow is unavailable. |
-| `reports/exercise_2_15_report.md` | Chinese/English-ready report content for parts (a), (b), and (c), including result tables and discussion. |
-| `result/exercise_2_15_fast_results.csv` | CPU-only proxy verification results. |
-| `result/exercise_2_15_csinet_results.csv` | TensorFlow CsiNet results generated in the `csinet_tf` Conda environment. |
+## 2. Exercise Requirement
 
-Current environment note: the base Python is 3.13, so a separate Conda environment named `csinet_tf` was created with Python 3.10 and TensorFlow 2.10.1. The TensorFlow runner uses `channels_last` internally because Windows CPU TensorFlow does not support `channels_first` Conv2D backpropagation.
+| Part | Requirement | Implementation in This Project |
+|---|---|---|
+| (a) | Use the COST2100 channel model to generate more than five different channel datasets, such as by changing user distributions. | Six official COST2100-based datasets are generated with different indoor/outdoor user distributions. |
+| (b) | Evaluate the CSI reconstruction NMSE of a trained CsiNet model on each dataset. | A CsiNet model trained on `D1_indoor_uniform` is tested on all six datasets. |
+| (c) | Mix the different datasets, retrain CsiNet, compare with (b), and discuss generalization. | All six datasets are mixed to train another CsiNet model. NMSE, rho, and loss curves are reported. |
 
-Quick local verification:
+## 3. References
 
-```powershell
-python scripts/run_exercise_2_15_fast.py --generate --train-samples 1200 --val-samples 300 --test-samples 400 --encoded-dim 128 --mix-limit 1200
+- Exercise reference code: https://github.com/le-liang/wcmlbook/tree/main/ch2/Exercise_2.15
+- Official COST2100 channel model: https://github.com/cost2100/cost2100
+- Local reference paper: `Deep_Learning_for_Massive_MIMO_CSI_Feedback.pdf`
+
+
+## 4. CsiNet Background and Metrics
+
+CsiNet converts the spatial-frequency channel into the angular-delay domain. In the notation of the CsiNet paper, the transformation can be written as:
+
+$$
+\mathbf{H} = \mathbf{F}_d \, \widetilde{\mathbf{H}} \, \mathbf{F}_a^{H}
+$$
+
+where:
+
+- $\widetilde{\mathbf{H}}$ is the original spatial-frequency channel matrix.
+- $\mathbf{F}_d$ is the DFT matrix for the delay/frequency dimension.
+- $\mathbf{F}_a$ is the DFT matrix for the antenna/angular dimension.
+- $\mathbf{H}$ is the angular-delay domain channel matrix.
+
+Following the CsiNet setting, only the first 32 delay-domain rows are retained. The final CsiNet input is a `32 x 32 x 2` tensor, where the two channels are the real and imaginary parts of the truncated complex CSI matrix.
+
+The main reconstruction metric is NMSE:
+
+$$
+\mathrm{NMSE} = \mathbb{E}\left\{\frac{\left\|\mathbf{H} - \widehat{\mathbf{H}}\right\|_2^2}{\left\|\mathbf{H}\right\|_2^2}\right\}
+$$
+
+The reported value is in dB:
+
+$$
+\mathrm{NMSE}_{\mathrm{dB}} = 10\log_{10}(\mathrm{NMSE})
+$$
+
+Lower NMSE is better. A more negative NMSE value means better CSI reconstruction.
+
+The correlation coefficient $\rho$ is also reported as a supplementary metric:
+
+$$
+\rho = \mathbb{E}\left\{\frac{\left|\widehat{\mathbf{h}}^{H}\mathbf{h}\right|}{\left\|\widehat{\mathbf{h}}\right\|_2\left\|\mathbf{h}\right\|_2}\right\}
+$$
+
+In this project, NMSE is the primary metric because Exercise 2.15 explicitly asks for CSI reconstruction NMSE.
+
+## 5. Directory Structure
+
+```text
+MidTerm_Q7/
+├── CsiNet_train.py
+├── CsiNet_onlytest.py
+├── CS-CsiNet_train.py
+├── CS-CsiNet_onlytest.py
+├── Deep_Learning_for_Massive_MIMO_CSI_Feedback.pdf
+├── Exercise2.15.png
+├── README.md
+├── README_Q7.md
+├── cost2100/
+│   ├── README.md
+│   ├── cplusplus/
+│   └── matlab/
+├── data/
+│   └── cost2100_official/
+├── docs/
+│   └── cost2100_official_workflow.md
+├── figure/
+│   ├── nmse_comparison.png
+│   ├── nmse_improvement.png
+│   ├── rho_comparison.png
+│   ├── training_loss_curves.png
+│   ├── reconstruction_D1_indoor_uniform.png
+│   ├── reconstruction_D5_outdoor_uniform.png
+│   └── reconstruction_D6_outdoor_clustered.png
+├── matlab/
+│   └── generate_cost2100_csinet_datasets.m
+├── reports/
+│   └── exercise_2_15_report.md
+├── result/
+│   ├── exercise_2_15_csinet_results.csv
+│   ├── history_CsiNet_D1_indoor_uniform_dim512_epochs100.csv
+│   └── history_CsiNet_mixed_all_dim512_epochs100.csv
+├── saved_model/
+│   ├── CsiNet_D1_indoor_uniform_dim512.weights.h5
+│   └── CsiNet_mixed_all_dim512.weights.h5
+└── scripts/
+    ├── exercise_2_15_datasets.py
+    ├── run_exercise_2_15_tf.py
+    ├── plot_exercise_2_15_results.py
+    └── validate_cost2100_export.py
 ```
 
-TensorFlow CsiNet run:
+## 6. Original Code and New Design
 
-```powershell
-conda run -n csinet_tf python scripts/run_exercise_2_15_tf.py --encoded-dim 512 --epochs 20 --batch-size 100 --mix-limit 1200 --val-limit 300
+### 6.1 Original Reference Code
+
+The original files are kept as reference implementations:
+
+| File | Function |
+|---|---|
+| `CsiNet_train.py` | Original CsiNet training script. |
+| `CsiNet_onlytest.py` | Original CsiNet inference-only script. |
+| `CS-CsiNet_train.py` | Original CS-CsiNet training script. |
+| `CS-CsiNet_onlytest.py` | Original CS-CsiNet inference-only script. |
+
+
+### 6.2 New MATLAB Code
+
+| File | Function |
+|---|---|
+| `matlab/generate_cost2100_csinet_datasets.m` | Calls the official COST2100 MATLAB model, generates six channel datasets, converts channels into CsiNet-compatible `.mat` files, and stores them under `data/cost2100_official/`. |
+
+The exported `.mat` files follow this layout:
+
+```text
+DATA_Htrain.mat       key: HT
+DATA_Hval.mat         key: HT
+DATA_Htest.mat        key: HT
+DATA_HtestF_all.mat   key: HF_all
 ```
 
-## What You Need to Do
+where:
 
-| Step | Task | Details |
-| :---: | :--- | :--- |
-| 1 | **Code Preparation** | Ensure you have installed the required dependencies (TensorFlow 1.x or 2.x, Keras, NumPy, SciPy, Matplotlib). Create directories `data`, `result`, and `saved_model`. |
-| 2 | **Data Preparation** | Place MATLAB-formatted CSI datasets and random projection matrices in the `data/` directory. |
-| 3 | **Model Training** | Run `CsiNet_train.py` and `CS-CsiNet_train.py` to train the models and save their architectures/weights to the `result/` folder. |
-| 4 | **Model Inference** | Copy pre-trained model files to `saved_model/` and run `CsiNet_onlytest.py` or `CS-CsiNet_onlytest.py` to evaluate reconstruction performance. |
+```text
+HT     : [samples, 2048]
+HF_all : [samples, 32, 125]
+```
 
-## File Structure
+### 6.3 New Python Code
 
-| File / Directory | Purpose |
-|------|---------|
-| `CsiNet_train.py` | CsiNet training pipeline: model building, training, evaluation, saving. |
-| `CsiNet_onlytest.py` | CsiNet inference only: load pre-trained model, reconstruct CSI, evaluate. |
-| `CS-CsiNet_train.py` | CS-CsiNet training pipeline: train decoder with fixed CS encoder. |
-| `CS-CsiNet_onlytest.py` | CS-CsiNet inference only: load decoder, reconstruct CSI from compressed data. |
-| `data/` | Directory containing MATLAB-formatted CSI datasets and random projection matrices. |
-| `result/` | Output directory containing training logs, loss curves, reconstructed data, and model checkpoints. |
-| `saved_model/` | Output directory containing pre-trained model architectures (`.json`) and weights (`.h5`) for inference. |
+| File | Function |
+|---|---|
+| `scripts/exercise_2_15_datasets.py` | Shared dataset utilities: dataset names, `.mat` loading, `HT`/`HF_all` reading, and mixed-dataset construction. |
+| `scripts/run_exercise_2_15_tf.py` | Main TensorFlow CsiNet experiment runner. It trains one single-dataset model and one mixed-dataset model, evaluates both on all datasets, and exports CSV/history files. |
+| `scripts/plot_exercise_2_15_results.py` | Generates all figures used in this README. |
+| `scripts/validate_cost2100_export.py` | Validates the official COST2100 `.mat` exports before training. |
 
----
+The TensorFlow runner uses `channels_last` internally because Windows CPU TensorFlow does not support `channels_first` Conv2D backpropagation. This is an implementation compatibility change; the CsiNet reconstruction task and evaluation remain the same.
 
-## Detailed Task Breakdown
+## 7. Dataset Design for Part (a)
 
-### Part 1: CsiNet Training and Inference
-An end-to-end residual-based autoencoder for CSI compression/reconstruction:
-*   **Encoder:** Conv2D → Flatten → Dense (adaptive CSI feature compression). Fully trainable without needing a pre-defined compression matrix.
-*   **Decoder:** Dense → Reshape → Stacked Residual Blocks → Conv2D (CSI reconstruction).
+Six official COST2100-based datasets were generated:
 
-### Part 2: CS-CsiNet Training and Inference
-A compressed sensing enhanced version of CsiNet:
-*   **Encoder:** Fixed random projection matrix (non-trainable CS projection). Lightweight, no training needed.
-*   **Decoder:** Residual-based structure (trainable for CSI reconstruction).
+| Dataset | COST2100 Environment | User Distribution | Purpose |
+|---|---|---|---|
+| `D1_indoor_uniform` | `IndoorHall_5GHz` | Uniform indoor users | Baseline indoor training distribution. |
+| `D2_indoor_center` | `IndoorHall_5GHz` | Users concentrated near the BS | Tests near-user indoor channels. |
+| `D3_indoor_edge` | `IndoorHall_5GHz` | Users near the cell edge | Tests far-user indoor channels. |
+| `D4_indoor_ring` | `IndoorHall_5GHz` | Ring-shaped indoor distribution | Tests structured non-uniform indoor channels. |
+| `D5_outdoor_uniform` | `SemiUrban_300MHz` | Uniform outdoor users | Tests outdoor domain shift. |
+| `D6_outdoor_clustered` | `SemiUrban_300MHz` | Clustered outdoor users | Tests outdoor hotspot-like deployment. |
 
----
+Each dataset contains:
 
-## Key Parameters (Modify at script top)
+```text
+train: 1200 samples
+val  : 300 samples
+test : 400 samples
+```
 
-| Parameter | Default | Description |
-| :--- | :--- | :--- |
-| `envir` | `indoor` | Wireless environment (`indoor`/`outdoor`). |
-| `img_height/width` | `32/32` | CSI matrix spatial/frequency dimensions. |
-| `img_channels` | `2` | CSI channels (real + imaginary parts). |
-| `residual_num` | `2` | Number of residual blocks in decoder. |
-| `encoded_dim` | `512` | Compression dimension (512=1/4, 128=1/16, 64=1/32, 32=1/64). |
+The CsiNet compressed codeword dimension is:
 
----
+```text
+encoded_dim = 512
+```
 
-## Performance Metrics & Important Notes
+Since the input has `32 x 32 x 2 = 2048` real-valued entries, this corresponds to a compression ratio of `512 / 2048 = 1/4`.
 
-**Performance Metrics**
-*   **Normalized Mean Square Error (NMSE, dB):** `10*log10(E[|CSI_orig - CSI_rec|²]/E[|CSI_orig|²])`. Smaller (more negative) = better reconstruction.
-*   **Correlation Coefficient (rho):** Range: [0,1], closer to 1 = higher similarity between original/reconstructed CSI.
+## 8. Reproduction Commands
 
-**Important Notes**
-1. Inference scripts must use the same `envir` and `encoded_dim` as the pre-trained model.
-2. CS-CsiNet requires matching random projection matrix (`A{encoded_dim}.mat`).
-3. Remove `tf.reset_default_graph()` for TensorFlow 2.x compatibility.
-4. Code uses "channels_first" data format (do not modify without adjusting network).
-5. Default training epochs: 1000 (adjust based on dataset/hardware).
+### 8.1 Generate Official COST2100 Data in MATLAB
+
+```matlab
+cd('D:\NYCU\class\Artificial Intelligence Wireless\NYCU-AI-Wireless-Communication-HW\MidTerm_Q7')
+addpath(genpath(fullfile(pwd, 'matlab')))
+
+cost_root = fullfile(pwd, 'cost2100');
+addpath(genpath(fullfile(cost_root, 'matlab')))
+
+generate_cost2100_csinet_datasets(cost_root)
+```
+
+### 8.2 Validate the Exported Data
+
+```powershell
+conda run -n csinet_tf python scripts/validate_cost2100_export.py --data-dir data/cost2100_official
+```
+
+Expected message:
+
+```text
+All COST2100 exports look compatible with the CsiNet pipeline.
+```
+
+### 8.3 Train and Evaluate CsiNet
+
+```powershell
+conda run -n csinet_tf python scripts/run_exercise_2_15_tf.py --data-dir data/cost2100_official --encoded-dim 512 --epochs 100 --batch-size 100 --mix-limit 1200 --val-limit 300
+```
+
+This trains two models:
+
+| Model | Training Data |
+|---|---|
+| Single-dataset CsiNet | `D1_indoor_uniform` only |
+| Mixed-dataset CsiNet | All six datasets mixed together |
+
+### 8.4 Generate Figures
+
+```powershell
+conda run -n csinet_tf python scripts/plot_exercise_2_15_results.py --data-dir data/cost2100_official
+```
+
+The README figures are copied to:
+
+```text
+figure/
+```
+
+## 9. Results and Figures
+
+### 9.1 Training Loss Curves
+
+![Training Loss Curves](figure/training_loss_curves.png)
+
+Both the single-dataset model and mixed-dataset model converge over 100 epochs. The mixed-dataset model has more training samples, but its training and validation losses remain stable and continue decreasing, showing that the mixed training process is effective.
+
+### 9.2 NMSE Comparison
+
+![NMSE Comparison](figure/nmse_comparison.png)
+
+The mixed-dataset model achieves lower NMSE on every test dataset. The single-dataset model performs reasonably on indoor datasets but degrades strongly on outdoor datasets, showing limited generalization under domain shift.
+
+### 9.3 NMSE Improvement
+
+![NMSE Improvement](figure/nmse_improvement.png)
+
+Mixed training improves all datasets. The improvement is around `3.46-3.82 dB` on indoor datasets and around `9.41-9.46 dB` on outdoor datasets. This indicates that the benefit of mixed training is especially large when the test channel distribution differs strongly from the original indoor training distribution.
+
+### 9.4 Rho Comparison
+
+![Rho Comparison](figure/rho_comparison.png)
+
+
+### 9.5 Reconstruction Examples: Indoor Uniform
+
+![Reconstruction D1](figure/reconstruction_D1_indoor_uniform.png)
+
+For the indoor uniform dataset, the mixed CsiNet model reconstructs the dominant angular-delay structures clearly.
+
+### 9.6 Reconstruction Examples: Outdoor Uniform
+
+![Reconstruction D5](figure/reconstruction_D5_outdoor_uniform.png)
+
+For the outdoor uniform dataset, mixed training is much more important. The NMSE comparison shows that the single indoor-trained model generalizes poorly to this scenario, while the mixed model reconstructs the main structures more robustly.
+
+### 9.7 Reconstruction Examples: Outdoor Clustered
+
+![Reconstruction D6](figure/reconstruction_D6_outdoor_clustered.png)
+
+## 10. Numeric Results
+
+### 10.1 Part (b): Single-Dataset CsiNet Evaluation
+
+The single-dataset model is trained only on `D1_indoor_uniform` and evaluated on all six datasets.
+
+| Test Dataset | NMSE (dB) | rho |
+|---|---:|---:|
+| D1_indoor_uniform | -8.5760 | 0.139362 |
+| D2_indoor_center | -7.5798 | 0.138616 |
+| D3_indoor_edge | -8.6165 | 0.149060 |
+| D4_indoor_ring | -8.7081 | 0.143861 |
+| D5_outdoor_uniform | -3.4702 | 0.136041 |
+| D6_outdoor_clustered | -3.7739 | 0.144101 |
+
+### 10.2 Part (c): Mixed-Dataset CsiNet Evaluation
+
+The mixed-dataset model is trained on all six datasets and evaluated on the same six test sets.
+
+| Test Dataset | Mixed NMSE (dB) | Mixed rho |
+|---|---:|---:|
+| D1_indoor_uniform | -12.1743 | 0.143565 |
+| D2_indoor_center | -11.1076 | 0.141723 |
+| D3_indoor_edge | -12.4335 | 0.150543 |
+| D4_indoor_ring | -12.1716 | 0.145666 |
+| D5_outdoor_uniform | -12.9349 | 0.148281 |
+| D6_outdoor_clustered | -13.1864 | 0.155575 |
+
+### 10.3 NMSE Improvement from Mixed Training
+
+| Test Dataset | Single NMSE (dB) | Mixed NMSE (dB) | Improvement (dB) |
+|---|---:|---:|---:|
+| D1_indoor_uniform | -8.5760 | -12.1743 | 3.5983 |
+| D2_indoor_center | -7.5798 | -11.1076 | 3.5278 |
+| D3_indoor_edge | -8.6165 | -12.4335 | 3.8170 |
+| D4_indoor_ring | -8.7081 | -12.1716 | 3.4635 |
+| D5_outdoor_uniform | -3.4702 | -12.9349 | 9.4647 |
+| D6_outdoor_clustered | -3.7739 | -13.1864 | 9.4125 |
+
+## 11. Discussion
+
+The results answer the question of Exercise 2.15: **CsiNet can perform poorly on channel datasets that differ significantly from the training distribution, but mixed-dataset training improves generalization.**
+
+For the single-dataset model, indoor test datasets achieve around `-7.58` to `-8.71 dB`, while outdoor test datasets drop to around `-3.47` to `-3.77 dB`. This means that a CsiNet model trained only on one indoor distribution does not generalize well to outdoor channel conditions.
+
+After mixing six COST2100 datasets for training, the model achieves around `-11.11` to `-13.19 dB` across all datasets. The outdoor datasets gain more than `9 dB`, indicating that diverse channel training data is especially important under environment shift.
+
+In practical systems, the channel distribution changes with user position, scattering geometry, carrier frequency, mobility, and deployment scenario. To improve the generalization of DL-based CSI feedback methods, the training data should include diverse environments and user distributions.
+
+## 12. Conclusion
+
+The final conclusion is that **DL-based CSI feedback methods such as CsiNet should be trained on diverse channel distributions to improve robustness in practical wireless systems**. Mixed-dataset training is an effective and simple way to improve generalization when user distribution, scenario, and propagation statistics vary.

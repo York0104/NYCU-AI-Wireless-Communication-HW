@@ -8,6 +8,9 @@ This repository contains homework assignments, code implementations, reports, an
 - `Exercise_2_1`
 - `Exercise_2_4`
 - `Exercise_2_7`
+- `MidTerm_Q2`
+- `MidTerm_Q7`
+- `MidTerm_Extra`
 
 ## Description
 

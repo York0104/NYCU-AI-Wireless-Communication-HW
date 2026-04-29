@@ -18,7 +18,7 @@ The key question is whether a deep-learning-based CSI feedback model can general
 
 - Exercise reference code: https://github.com/le-liang/wcmlbook/tree/main/ch2/Exercise_2.15
 - Official COST2100 channel model: https://github.com/cost2100/cost2100
-- Local reference paper: `Deep_Learning_for_Massive_MIMO_CSI_Feedback.pdf`
+- Reference paper: `Deep_Learning_for_Massive_MIMO_CSI_Feedback.pdf`
 
 
 ## 4. CsiNet Background and Metrics
@@ -41,7 +41,7 @@ Following the CsiNet setting, only the first 32 delay-domain rows are retained. 
 The main reconstruction metric is NMSE:
 
 $$
-\mathrm{NMSE} = \mathbb{E}\left\{\frac{\left\|\mathbf{H} - \widehat{\mathbf{H}}\right\|_2^2}{\left\|\mathbf{H}\right\|_2^2}\right\}
+\operatorname{NMSE} = \mathbb{E}[\frac{\|\mathbf{H} - \widehat{\mathbf{H}}\|_2^2}{\|\mathbf{H}\|_2^2}]
 $$
 
 The reported value is in dB:
@@ -55,7 +55,7 @@ Lower NMSE is better. A more negative NMSE value means better CSI reconstruction
 The correlation coefficient $\rho$ is also reported as a supplementary metric:
 
 $$
-\rho = \mathbb{E}\left\{\frac{\left|\widehat{\mathbf{h}}^{H}\mathbf{h}\right|}{\left\|\widehat{\mathbf{h}}\right\|_2\left\|\mathbf{h}\right\|_2}\right\}
+\rho = \mathbb{E}[\frac{|\widehat{\mathbf{h}}^{H}\mathbf{h}|}{\|\widehat{\mathbf{h}}\|_2\,\|\mathbf{h}\|_2}]
 $$
 
 In this project, NMSE is the primary metric because Exercise 2.15 explicitly asks for CSI reconstruction NMSE.
@@ -326,3 +326,4 @@ In practical systems, the channel distribution changes with user position, scatt
 ## 12. Conclusion
 
 The final conclusion is that **DL-based CSI feedback methods such as CsiNet should be trained on diverse channel distributions to improve robustness in practical wireless systems**. Mixed-dataset training is an effective and simple way to improve generalization when user distribution, scenario, and propagation statistics vary.
+

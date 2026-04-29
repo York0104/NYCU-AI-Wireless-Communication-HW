@@ -41,7 +41,7 @@ Following the CsiNet setting, only the first 32 delay-domain rows are retained. 
 The main reconstruction metric is NMSE:
 
 $$
-\operatorname{NMSE} = \mathbb{E}[\frac{\|\mathbf{H} - \widehat{\mathbf{H}}\|_2^2}{\|\mathbf{H}\|_2^2}]
+\mathrm{NMSE} = \mathbb{E}[\frac{\|\mathbf{H} - \widehat{\mathbf{H}}\|_2^2}{\|\mathbf{H}\|_2^2}]
 $$
 
 The reported value is in dB:
@@ -326,4 +326,5 @@ In practical systems, the channel distribution changes with user position, scatt
 ## 12. Conclusion
 
 The final conclusion is that **DL-based CSI feedback methods such as CsiNet should be trained on diverse channel distributions to improve robustness in practical wireless systems**. Mixed-dataset training is an effective and simple way to improve generalization when user distribution, scenario, and propagation statistics vary.
+
 

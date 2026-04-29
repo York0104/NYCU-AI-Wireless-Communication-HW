@@ -3,8 +3,7 @@ TensorFlow CsiNet runner for Exercise 2.15.
 
 Run this script in a TensorFlow-compatible Python environment, for example
 Python 3.10 or 3.11 with tensorflow installed.  It consumes the datasets
-created by scripts/run_exercise_2_15_fast.py --generate or equivalent COST
-2100 .mat files with the same layout.
+exported from the official COST2100 MATLAB workflow.
 """
 
 from __future__ import annotations
@@ -26,7 +25,6 @@ from scripts.exercise_2_15_datasets import (  # noqa: E402
     IMG_CHANNELS,
     IMG_HEIGHT,
     IMG_WIDTH,
-    generate_all,
     load_hf_test,
     load_ht,
     mixed_ht,
@@ -39,8 +37,8 @@ def import_tensorflow():
     except ModuleNotFoundError as exc:
         raise SystemExit(
             "TensorFlow is not installed in this Python environment. "
-            "Use Python 3.10/3.11 and install tensorflow, or run "
-            "scripts/run_exercise_2_15_fast.py for a CPU-only pipeline check."
+            "Use Python 3.10/3.11 and install tensorflow in the "
+            "`csinet_tf` environment."
         ) from exc
     return tf
 
@@ -114,9 +112,6 @@ def train_and_evaluate(args: argparse.Namespace) -> Path:
     result_dir.mkdir(parents=True, exist_ok=True)
     model_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.generate:
-        generate_all(data_dir, args.train_samples, args.val_samples, args.test_samples, args.seed)
-
     dataset_names = [spec.name for spec in DATASET_SPECS]
     training_sets = [
         ("single_dataset", args.baseline_dataset, load_ht(data_dir, args.baseline_dataset, "train"), load_ht(data_dir, args.baseline_dataset, "val")),
@@ -184,12 +179,8 @@ def train_and_evaluate(args: argparse.Namespace) -> Path:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-dir", default="data/exercise_2_15_generated")
+    parser.add_argument("--data-dir", default="data/cost2100_official")
     parser.add_argument("--result-dir", default="result")
-    parser.add_argument("--generate", action="store_true")
-    parser.add_argument("--train-samples", type=int, default=2500)
-    parser.add_argument("--val-samples", type=int, default=600)
-    parser.add_argument("--test-samples", type=int, default=800)
     parser.add_argument("--encoded-dim", type=int, default=512)
     parser.add_argument("--residual-num", type=int, default=2)
     parser.add_argument("--epochs", type=int, default=50)

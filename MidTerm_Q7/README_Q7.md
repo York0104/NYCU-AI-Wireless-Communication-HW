@@ -8,26 +8,26 @@ This workspace also includes a complete Exercise 2.15 experiment pipeline:
 
 | File | Purpose |
 |------|---------|
-| `scripts/exercise_2_15_datasets.py` | Generates six COST-2100-style channel datasets with different user distributions. |
+| `scripts/exercise_2_15_datasets.py` | Shared dataset utilities for loading official COST2100 exports and building mixed training sets. |
 | `scripts/run_exercise_2_15_tf.py` | Runs the TensorFlow/Keras CsiNet single-dataset and mixed-dataset experiment. |
-| `scripts/run_exercise_2_15_fast.py` | Runs a CPU-only PCA autoencoder proxy to verify the full pipeline when TensorFlow is unavailable. |
 | `reports/exercise_2_15_report.md` | Chinese/English-ready report content for parts (a), (b), and (c), including result tables and discussion. |
-| `result/exercise_2_15_fast_results.csv` | CPU-only proxy verification results. |
-| `result/exercise_2_15_csinet_results.csv` | TensorFlow CsiNet results generated in the `csinet_tf` Conda environment. |
+| `result/exercise_2_15_csinet_results.csv` | Final TensorFlow CsiNet results on the official COST2100 export. |
 
 Current environment note: the base Python is 3.13, so a separate Conda environment named `csinet_tf` was created with Python 3.10 and TensorFlow 2.10.1. The TensorFlow runner uses `channels_last` internally because Windows CPU TensorFlow does not support `channels_first` Conv2D backpropagation.
-
-Quick local verification:
-
-```powershell
-python scripts/run_exercise_2_15_fast.py --generate --train-samples 1200 --val-samples 300 --test-samples 400 --encoded-dim 128 --mix-limit 1200
-```
 
 TensorFlow CsiNet run:
 
 ```powershell
-conda run -n csinet_tf python scripts/run_exercise_2_15_tf.py --encoded-dim 512 --epochs 20 --batch-size 100 --mix-limit 1200 --val-limit 300
+conda run -n csinet_tf python scripts/run_exercise_2_15_tf.py --data-dir data/cost2100_official --encoded-dim 512 --epochs 100 --batch-size 100 --mix-limit 1200 --val-limit 300
 ```
+
+Current canonical result set:
+
+- `README.md`
+- `reports/exercise_2_15_report.md`
+- `result/exercise_2_15_csinet_results.csv`
+
+All three now refer to the same experiment version: official COST2100 export, `encoded_dim=512`, and `100` training epochs.
 
 ## What You Need to Do
 

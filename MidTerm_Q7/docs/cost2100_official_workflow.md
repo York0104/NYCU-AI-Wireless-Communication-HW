@@ -1,8 +1,8 @@
 # Official COST2100 Workflow for Exercise 2.15
 
-This project already has a Python COST-2100-style generator for reproducible
-experiments. If the assignment must use the official MATLAB COST2100 model,
-use this workflow.
+This workflow is the canonical way to generate data for this project. The
+assignment results in this repository are based on the official MATLAB
+COST2100 model and the exported files under `data/cost2100_official`.
 
 ## 1. Clone COST2100
 
@@ -61,9 +61,6 @@ conda run -n csinet_tf python scripts/validate_cost2100_export.py --data-dir dat
 
 ## 5. Train and Evaluate CsiNet on Official COST2100 Data
 
-Do not use `--generate`, otherwise the Python surrogate generator will
-overwrite the data directory.
-
 ```powershell
 conda run -n csinet_tf python scripts/run_exercise_2_15_tf.py --data-dir data/cost2100_official --encoded-dim 512 --epochs 100 --batch-size 100 --mix-limit 1200 --val-limit 300
 ```
@@ -93,4 +90,3 @@ extract_channel_matrix(channel)
 
 The rest of the CsiNet pipeline can stay unchanged as long as the exported
 files keep the same `HT` and `HF_all` layout.
-

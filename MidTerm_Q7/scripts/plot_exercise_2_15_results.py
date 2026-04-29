@@ -147,7 +147,7 @@ def main() -> None:
     parser.add_argument("--results", default="result/exercise_2_15_csinet_results.csv")
     parser.add_argument("--result-dir", default="result")
     parser.add_argument("--figure-dir", default="result/figures")
-    parser.add_argument("--data-dir", default="data/exercise_2_15_generated")
+    parser.add_argument("--data-dir", default="data/cost2100_official")
     parser.add_argument("--encoded-dim", type=int, default=512)
     parser.add_argument("--examples", type=int, default=6)
     parser.add_argument("--reconstruction-datasets", nargs="*", default=["D1_indoor_uniform", "D5_outdoor_uniform", "D6_outdoor_clustered"])
@@ -166,4 +166,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

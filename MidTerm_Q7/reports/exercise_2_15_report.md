@@ -24,38 +24,52 @@ The CsiNet reference paper uses the COST 2100 channel model with the following i
 - The CsiNet input contains two channels: real and imaginary parts, normalized to [0, 1].
 - NMSE is defined as `E{||H - H_hat||^2 / ||H||^2}` and is reported in dB.
 
+## Experiment Version Used in This Repository
+
+This report is aligned with the current repository results in `README.md` and `result/exercise_2_15_csinet_results.csv`.
+
+- Channel source: official COST2100 MATLAB model exported through `matlab/generate_cost2100_csinet_datasets.m`
+- Data directory: `data/cost2100_official`
+- Model: TensorFlow/Keras CsiNet
+- Encoded dimension: `512`
+- Training epochs: `100`
+- Single-dataset training samples: `1200`
+- Validation samples per dataset: `300`
+- Test samples per dataset: `400`
+- Mixed training samples: `7200` total, from all six datasets
+
 ## (a) Dataset Generation
 
-Six different datasets were generated. They preserve the CsiNet input format `32 x 32 x 2`, while changing the user distribution and propagation condition. This follows the instruction to generate different channel datasets by changing the distribution of users.
+Six different datasets were generated from the official COST2100 workflow. They preserve the CsiNet input format `32 x 32 x 2`, while changing the user distribution and propagation condition.
 
-| Dataset | Environment | User Distribution | Purpose |
+| Dataset | COST2100 Environment | User Distribution | Purpose |
 |---|---|---|---|
-| D1_indoor_uniform | Indoor, 20 m square, 5.3 GHz | Uniform over the full square | Baseline indoor distribution |
-| D2_indoor_center | Indoor, 20 m square, 5.3 GHz | Concentrated near BS | Tests near-user channels |
-| D3_indoor_edge | Indoor, 20 m square, 5.3 GHz | Concentrated near cell edge | Tests far-user channels |
-| D4_indoor_ring | Indoor, 20 m square, 5.3 GHz | Ring-shaped distribution | Tests non-uniform but distance-controlled channels |
-| D5_outdoor_uniform | Outdoor, 400 m square, 300 MHz | Uniform over the full square | Baseline outdoor distribution |
-| D6_outdoor_clustered | Outdoor, 400 m square, 300 MHz | Several user clusters | Tests hotspot-like deployment |
+| D1_indoor_uniform | `IndoorHall_5GHz` | Uniform indoor users | Baseline indoor distribution |
+| D2_indoor_center | `IndoorHall_5GHz` | Users concentrated near the BS | Tests near-user indoor channels |
+| D3_indoor_edge | `IndoorHall_5GHz` | Users near the cell edge | Tests far-user indoor channels |
+| D4_indoor_ring | `IndoorHall_5GHz` | Ring-shaped indoor distribution | Tests structured indoor variation |
+| D5_outdoor_uniform | `SemiUrban_300MHz` | Uniform outdoor users | Tests outdoor domain shift |
+| D6_outdoor_clustered | `SemiUrban_300MHz` | Clustered outdoor users | Tests outdoor hotspot-like deployment |
 
-The included generator is a deterministic COST-2100-style surrogate. It creates sparse angular-delay channels with clustered multipath components, distance-dependent path loss, angle spread, and delay spread. If the official MATLAB COST 2100 generator is available, its `.mat` outputs can replace these files directly as long as they provide the same keys:
+The exported `.mat` files use:
 
-- `HT`: normalized CsiNet input, shape `[samples, 2048]`.
-- `HF_all`: complex frequency-domain CSI for testing, shape `[samples, 32, 125]`.
+- `HT`: normalized CsiNet input, shape `[samples, 2048]`
+- `HF_all`: complex frequency-domain CSI for testing, shape `[samples, 32, 125]`
 
 ## (b) Cross-Dataset Evaluation
 
-The baseline CsiNet model is trained on `D1_indoor_uniform` and then tested on all six datasets. The experiment uses `encoded_dim = 512`, 20 epochs, 1200 training samples for the single-dataset model, and 400 testing samples per dataset. Because the experiment was executed on Windows CPU, the TensorFlow implementation uses `channels_last` internally; the CSI tensor content and NMSE/rho evaluation are kept equivalent to the original CsiNet setting.
+The baseline CsiNet model is trained on `D1_indoor_uniform` and then tested on all six datasets. The TensorFlow implementation uses `channels_last` internally for Windows CPU compatibility, while keeping the CSI tensor content and NMSE/rho evaluation equivalent to the CsiNet setting.
 
 | Train Dataset | Test Dataset | NMSE (dB) | rho |
 |---|---|---:|---:|
-| D1_indoor_uniform | D1_indoor_uniform | 0.0005 | 0.314942 |
-| D1_indoor_uniform | D2_indoor_center | 0.1515 | 0.332673 |
-| D1_indoor_uniform | D3_indoor_edge | -0.2322 | 0.311674 |
-| D1_indoor_uniform | D4_indoor_ring | -0.2603 | 0.334071 |
-| D1_indoor_uniform | D5_outdoor_uniform | 1.1156 | 0.276044 |
-| D1_indoor_uniform | D6_outdoor_clustered | 0.0821 | 0.293378 |
+| D1_indoor_uniform | D1_indoor_uniform | -8.5760 | 0.139362 |
+| D1_indoor_uniform | D2_indoor_center | -7.5798 | 0.138616 |
+| D1_indoor_uniform | D3_indoor_edge | -8.6165 | 0.149060 |
+| D1_indoor_uniform | D4_indoor_ring | -8.7081 | 0.143861 |
+| D1_indoor_uniform | D5_outdoor_uniform | -3.4702 | 0.136041 |
+| D1_indoor_uniform | D6_outdoor_clustered | -3.7739 | 0.144101 |
 
-The baseline model performs better on indoor-like distributions and degrades on the outdoor and clustered datasets. This is expected because the training distribution only contains indoor uniform users, so the learned representation is biased toward that channel distribution.
+The baseline model performs reasonably on the indoor datasets, but its NMSE degrades strongly on the outdoor datasets. This shows that a model trained only on one indoor distribution does not generalize well when the channel statistics shift to another environment.
 
 ## (c) Mixed-Dataset Training and Comparison
 
@@ -63,14 +77,14 @@ The six datasets were mixed and used as the training set. The mixed model was th
 
 | Test Dataset | Baseline NMSE (dB) | Mixed-Train NMSE (dB) | Improvement (dB) | Baseline rho | Mixed rho |
 |---|---:|---:|---:|---:|---:|
-| D1_indoor_uniform | 0.0005 | -5.3079 | 5.3084 | 0.314942 | 0.609326 |
-| D2_indoor_center | 0.1515 | -5.0876 | 5.2391 | 0.332673 | 0.619628 |
-| D3_indoor_edge | -0.2322 | -5.5908 | 5.3586 | 0.311674 | 0.611074 |
-| D4_indoor_ring | -0.2603 | -5.9193 | 5.6590 | 0.334071 | 0.631303 |
-| D5_outdoor_uniform | 1.1156 | -4.0511 | 5.1667 | 0.276044 | 0.597032 |
-| D6_outdoor_clustered | 0.0821 | -5.4430 | 5.5251 | 0.293378 | 0.622798 |
+| D1_indoor_uniform | -8.5760 | -12.1743 | 3.5983 | 0.139362 | 0.143565 |
+| D2_indoor_center | -7.5798 | -11.1076 | 3.5278 | 0.138616 | 0.141723 |
+| D3_indoor_edge | -8.6165 | -12.4335 | 3.8170 | 0.149060 | 0.150543 |
+| D4_indoor_ring | -8.7081 | -12.1716 | 3.4635 | 0.143861 | 0.145666 |
+| D5_outdoor_uniform | -3.4702 | -12.9349 | 9.4647 | 0.136041 | 0.148281 |
+| D6_outdoor_clustered | -3.7739 | -13.1864 | 9.4125 | 0.144101 | 0.155575 |
 
-The mixed-training model improves NMSE on every test dataset. The improvement is around 5 dB for all six datasets, and rho nearly doubles compared with the single-distribution model. This supports the conclusion that training only on one channel distribution limits generalization, while training on diverse channel realizations makes the CSI feedback model more robust.
+The mixed-training model improves NMSE on every test dataset. The gain is about `3.46-3.82 dB` on indoor datasets and about `9.41-9.46 dB` on outdoor datasets. This supports the conclusion that training only on one channel distribution limits generalization, while training on diverse channel realizations makes the CSI feedback model much more robust under domain shift.
 
 ## Discussion
 
@@ -78,28 +92,42 @@ In practical wireless systems, the channel distribution changes with user locati
 
 To improve generalization in practical systems, the CSI feedback model should be trained with diverse channel data. Useful strategies include:
 
-- Mix indoor, outdoor, cell-center, cell-edge, clustered, and mobility-related channel samples during training.
-- Use domain randomization by varying user distribution, path loss, delay spread, angle spread, and number of clusters.
-- Fine-tune the decoder at the BS when new deployment data becomes available.
-- Use domain adaptation or transfer learning to adapt a pretrained CsiNet model to a new scenario with limited data.
-- Include temporal correlation for mobile users, for example using a recurrent, transformer, or predictive feedback architecture.
-- Use uncertainty-aware or ensemble feedback models when the channel distribution is highly variable.
+- Mix indoor, outdoor, cell-center, cell-edge, and clustered channel samples during training.
+- Use training datasets that span multiple propagation environments and user distributions.
+- Fine-tune the model when deployment-specific CSI data becomes available.
+- Use transfer learning or domain adaptation when moving to a new scenario with limited labeled data.
+- Extend the model to exploit temporal correlation when users are mobile.
 
 ## Reproduction Commands
 
-Generate the six datasets and run the local CPU verification:
+Generate the official COST2100 data in MATLAB:
 
-```powershell
-python scripts/run_exercise_2_15_fast.py --generate --train-samples 1200 --val-samples 300 --test-samples 400 --encoded-dim 128 --mix-limit 1200
+```matlab
+cd('D:\NYCU\class\Artificial Intelligence Wireless\NYCU-AI-Wireless-Communication-HW\MidTerm_Q7')
+addpath(genpath(fullfile(pwd, 'matlab')))
+cost_root = fullfile(pwd, 'cost2100');
+addpath(genpath(fullfile(cost_root, 'matlab')))
+generate_cost2100_csinet_datasets(cost_root)
 ```
 
-Run the TensorFlow CsiNet version:
+Validate the exported data:
 
 ```powershell
-conda run -n csinet_tf python scripts/run_exercise_2_15_tf.py --encoded-dim 512 --epochs 20 --batch-size 100 --mix-limit 1200 --val-limit 300
+conda run -n csinet_tf python scripts/validate_cost2100_export.py --data-dir data/cost2100_official
 ```
 
-The produced result files are:
+Run the TensorFlow CsiNet experiment:
 
-- `result/exercise_2_15_fast_results.csv`
-- `result/exercise_2_15_csinet_results.csv` after running the TensorFlow script
+```powershell
+conda run -n csinet_tf python scripts/run_exercise_2_15_tf.py --data-dir data/cost2100_official --encoded-dim 512 --epochs 100 --batch-size 100 --mix-limit 1200 --val-limit 300
+```
+
+## Output Files
+
+The main output files are:
+
+- `result/exercise_2_15_csinet_results.csv`
+- `result/history_CsiNet_D1_indoor_uniform_dim512_epochs100.csv`
+- `result/history_CsiNet_mixed_all_dim512_epochs100.csv`
+- `saved_model/CsiNet_D1_indoor_uniform_dim512.weights.h5`
+- `saved_model/CsiNet_mixed_all_dim512.weights.h5`

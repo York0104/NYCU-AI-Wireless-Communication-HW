@@ -32,7 +32,7 @@ Its key design principle is:
 - Exercise reference code: https://github.com/le-liang/wcmlbook/tree/main/ch2/Exercise_2.15
 - Official COST2100 channel model: https://github.com/cost2100/cost2100
 - Q7 baseline project: `../MidTerm_Q7`
-- Reference paper: `../Q7_extra/Deep_Learning-Based_CSI_Feedback_Approach_for_Time-Varying_Massive_MIMO_Channels.pdf`
+- Reference paper: `Deep_Learning-Based_CSI_Feedback_Approach_for_Time-Varying_Massive_MIMO_Channels.pdf`
 
 ## 4. Architecture Summary
 
@@ -107,7 +107,6 @@ The BS performs:
 - Doppler-aware fusion between current CSI and temporal features,
 - final CSI reconstruction.
 
-This makes the design more practical for deployment because the heavier temporal reasoning is concentrated at the BS.
 
 ## 5. Directory Structure
 
@@ -339,7 +338,7 @@ The following results are from the final submission configuration:
 
 *Figure: Training and validation loss curves of the proposed DA-TCFNet over 100 epochs.*
 
-The `DA-TCFNet` training process converges smoothly over 100 epochs. The training loss decreases from `0.1860` to `0.000623`, while the validation loss decreases from `0.1376` to `0.000940`. This indicates that the proposed model learns the synthetic temporal-feedback task stably without severe overfitting.
+The `DA-TCFNet` training process converges smoothly over 100 epochs. The training loss decreases from `0.1860` to `0.000623`, while the validation loss decreases from `0.1376` to `0.000940`. 
 
 ### 9.2 Ablation NMSE Comparison
 
@@ -389,7 +388,7 @@ The latency comparison confirms the expected deployment trade-off:
 
 *Figure: Illustration of how the three temporal correlation settings decay with time lag.*
 
-These figures summarize the generated temporal dataset and make it clear that the evaluation includes low-, medium-, and high-Doppler conditions.
+
 
 ### 9.6 Reconstruction Visualization
 
@@ -397,7 +396,7 @@ These figures summarize the generated temporal dataset and make it clear that th
 
 *Figure: Qualitative reconstruction comparison among Original CSI, CsiNet, CsiNet-LSTM, and DA-TCFNet at different Doppler conditions.*
 
-The reconstruction examples qualitatively show that all three models can recover the main angular-delay structure, but the relative quality changes with Doppler condition. This visual comparison complements the NMSE tables and makes the temporal robustness trend easier to interpret.
+The reconstruction examples qualitatively show that all three models can recover the main angular-delay structure, but the relative quality changes with Doppler condition.
 
 ## 10. Numeric Results
 
@@ -425,17 +424,8 @@ The final `DA-TCFNet` test result is:
 
 ## 11. Discussion
 
-The final results give a nuanced but meaningful conclusion.
-
 First, the proposed `DA-TCFNet` clearly improves robustness in the high-Doppler setting. At `rho = 0.50`, it achieves `-18.4157 dB`, outperforming both `CsiNet` (`-15.0813 dB`) and `CsiNet-LSTM` (`-16.0370 dB`). This directly supports the architectural motivation of reducing reliance on stale temporal information when channel variation becomes faster.
 
 Second, the proposed method does not dominate every scenario. At `rho = 0.80`, all three models are very close, and at `rho = 0.95`, `CsiNet` and `CsiNet-LSTM` are slightly better than `DA-TCFNet`. This indicates that the current `DA-TCFNet` design is better interpreted as a robustness-oriented architecture rather than a universally best NMSE optimizer.
 
 Third, the complexity numbers also match the intended design trade-off. `CsiNet` remains the lightest and fastest model, while `DA-TCFNet` introduces additional temporal processing cost. However, this additional cost is acceptable for a BS-heavy design, especially if the target deployment scenario values mobility robustness more than minimum latency.
-
-## 12. Notes and Limitations
-
-- The current sequence generator uses synthetic temporal mixing rather than a fully physical time-evolving COST2100 simulation.
-- The project is designed for a course assignment, so the main priority is a clear and reproducible architecture comparison rather than a large-scale benchmark.
-- For the fairest extra-credit comparison, use the three-way ablation on the same generated sequence target instead of directly comparing the sequence-task NMSE with the original Q7 single-frame NMSE.
-- The current results suggest that future work could improve the fusion mechanism so that the model keeps its high-Doppler advantage while reducing the gap under very high temporal correlation.

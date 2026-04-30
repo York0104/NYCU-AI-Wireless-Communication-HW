@@ -212,41 +212,25 @@ This gives a controllable course-project approximation of different mobility con
 The training objective used in this project is
 
 $$
-\mathcal{L}
-=
-\mathcal{L}_{\mathrm{rec}}
-+
-\beta \mathcal{L}_{\mathrm{temp}}
-+
-\eta \mathcal{L}_{\mathrm{rate}}
+\mathcal{L} = \mathcal{L}_{\mathrm{rec}} + \beta \mathcal{L}_{\mathrm{temp}} + \eta \mathcal{L}_{\mathrm{rate}}
 $$
 
 where the reconstruction loss is
 
 $$
-\mathcal{L}_{\mathrm{rec}}
-=
-\frac{\|\mathbf{H}_t - \hat{\mathbf{H}}_t\|_2^2}{\|\mathbf{H}_t\|_2^2}
+\mathcal{L}_{\mathrm{rec}} = \frac{\|\mathbf{H}_t - \hat{\mathbf{H}}_t\|_2^2}{\|\mathbf{H}_t\|_2^2}
 $$
 
 the temporal consistency term is
 
 $$
-\mathcal{L}_{\mathrm{temp}}
-=
-\left\|
-(\hat{\mathbf{H}}_t - \hat{\mathbf{H}}_{t-1})
--
-(\mathbf{H}_t - \mathbf{H}_{t-1})
-\right\|_2^2
+\mathcal{L}_{\mathrm{temp}} = \left\| (\hat{\mathbf{H}}_t - \hat{\mathbf{H}}_{t-1}) - (\mathbf{H}_t - \mathbf{H}_{t-1}) \right\|_2^2
 $$
 
 and the rate-aware term is
 
 $$
-\mathcal{L}_{\mathrm{rate}}
-=
-\|\mathbf{z}_t - Q(\mathbf{z}_t)\|_2^2
+\mathcal{L}_{\mathrm{rate}} = \|\mathbf{z}_t - Q(\mathbf{z}_t)\|_2^2
 $$
 
 This formulation is used only to define the training objective of the proposed model; it is not presented as a theorem or formal optimality proof.

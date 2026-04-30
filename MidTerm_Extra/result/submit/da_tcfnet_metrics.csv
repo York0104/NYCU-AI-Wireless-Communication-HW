@@ -1,0 +1,2 @@
+model,time_steps,encoded_dim,epochs,nmse_db,cosine_similarity,trainable_params,infer_seconds_per_sample
+DA-TCFNet,10,128,100,-21.5424,0.996646,1471708,0.00141381

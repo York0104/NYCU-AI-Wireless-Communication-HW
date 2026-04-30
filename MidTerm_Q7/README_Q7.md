@@ -88,5 +88,5 @@ A compressed sensing enhanced version of CsiNet:
 1. Inference scripts must use the same `envir` and `encoded_dim` as the pre-trained model.
 2. CS-CsiNet requires matching random projection matrix (`A{encoded_dim}.mat`).
 3. Remove `tf.reset_default_graph()` for TensorFlow 2.x compatibility.
-4. Code uses "channels_first" data format (do not modify without adjusting network).
+4. The original reference code uses `channels_first`, but this project uses `channels_last` internally for Windows CPU TensorFlow compatibility. The CSI tensor content and NMSE evaluation remain equivalent.
 5. Default training epochs: 1000 (adjust based on dataset/hardware).

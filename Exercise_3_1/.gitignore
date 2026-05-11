@@ -1,0 +1,3 @@
+tmp_OFDM_DNN/
+DNN_Detection/__pycache__/
+DNN_Detection/*.pyc

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This report summarizes the final reproducible results for Exercise 3.1 parts (b), (c), and (d) under the current environment.
+This report summarizes the final reproducible results for Exercise 3.1 parts (b), (c).
 
 The original repository code was designed for TensorFlow 1.1 and Python 2.7, and the copied starter code had two practical problems:
 
@@ -16,11 +16,8 @@ To complete the exercise, I:
 3. Kept the OFDM framing logic consistent with the paper and used the original channel dataset split `1..300` for training channels and `301..400` for test channels.
 4. Implemented DNN, LS, and MMSE comparisons and added grouped training-curve plots for each subproblem.
 
-The current implementation is closer to the paper than the earlier `scikit-learn` version because the FC-DNN is now trained with TensorFlow. However, it is still not a bit-exact reproduction of the original `TensorFlow 1.1 + Python 2.7` workflow.
 
 ## Mathematical Background
-
-The following equations are included only as supporting context for the simulation results in parts (b), (c), and (d).
 
 ### 1. OFDM frequency-domain received signal model
 
@@ -85,8 +82,6 @@ The output dimension depends on how many transmitted bits the DNN is asked to pr
 \text{64-QAM: } 6 \text{ bits/symbol}.
 ```
 
-This directly explains why part (c) is harder than part (b), and why the single large-output model in part (d) is harder to train than multiple small-output models.
-
 ### 5. BER definition
 
 The performance metric used in all plots is the bit error rate:
@@ -97,6 +92,28 @@ The performance metric used in all plots is the bit error rate:
 ```
 
 All BER curves in the report are empirical Monte Carlo estimates of this quantity.
+
+## Alignment With the Reference Paper
+
+The OFDM setup, pilot settings, input/output dimensions, and FC-DNN structure were aligned with the paper as closely as possible. However, the original `TensorFlow 1.1 / Python 2.7` training pipeline was replaced by a `TensorFlow 2.x` implementation, so the training details are not exactly identical to the reference.
+
+1. Items that are broadly aligned with the paper:
+   - `K = 64` subcarriers
+   - `CP = 16`
+   - comparison between `64 pilots` and `8 pilots`
+   - QPSK setting for part (b)
+   - 64-QAM setting for part (c)
+   - FC-DNN input based on real and imaginary parts of the received pilot/data symbols
+   - small FC-DNN structure corresponding to `256-500-250-120-16` for the QPSK bit-detection task
+   - single large-output DNN comparison in part (d)
+
+2. Items that are not exactly identical to the original reference implementation:
+   - the backend is `TensorFlow 2.x / tf.keras`, not the original `TensorFlow 1.1`
+   - optimizer, training loop, callback behavior, and stopping behavior follow the TensorFlow 2.x implementation in this repo
+
+3. Consequently, the most defensible claim for this work is：
+   - the experimental setup is paper-aligned at the system level
+   - the implementation is a modern TensorFlow reimplementation
 
 ## Final Run Used For This Report
 
@@ -140,8 +157,7 @@ Discussion:
 1. The BER curves have the correct qualitative trend: BER decreases as SNR increases.
 2. With 64 pilots, MMSE is best, LS is second, and DNN also improves steadily with SNR.
 3. With only 8 pilots, DNN is noticeably worse than the 64-pilot case, but it becomes competitive with LS at high SNR.
-4. Even after switching the DNN backend from `scikit-learn` to TensorFlow, the DNN still does not reproduce the paper's "close to MMSE" performance. Therefore, this work should be described as a TensorFlow-based modern reimplementation with correct qualitative trends, not a strict numerical reproduction of Figure 3.
-5. Training stability for part (b) is acceptable. Many DNN runs stop before the maximum iteration count, so part (b) is substantially better behaved than parts (c) and (d).
+4. Even after switching the DNN backend from `scikit-learn` to TensorFlow, the DNN still does not reproduce the paper's "close to MMSE" performance.
 
 Additional tuning note for part (b):
 
@@ -149,7 +165,7 @@ Additional tuning note for part (b):
 2. Example improvements:
    - 64 pilots, 20 dB: BER improved from about `0.0383` to `0.0218`
    - 8 pilots, 20 dB: BER improved from about `0.0538` to `0.0358`
-3. However, even after tuning, the DNN still did not reach MMSE-level performance. This suggests that the remaining gap is not just a minor hyperparameter issue.
+3. However, even after tuning, the DNN still did not reach MMSE-level performance.
 
 ## Part (c): Replace QPSK With 64-QAM
 
@@ -180,7 +196,7 @@ BER results:
 Discussion:
 
 1. After changing from QPSK to 64-QAM, BER becomes much worse for all methods, which is expected because the constellation is denser and each symbol carries more bits.
-2. This part now follows the exercise requirement more faithfully than before: the modulation is changed to `64-QAM`, while the FC-DNN hidden-layer structure remains the same as in part (b).
+2. The modulation is changed to `64-QAM`, while the FC-DNN hidden-layer structure remains the same as in part (b).
 3. The DNN is much weaker than LS and MMSE in every 64-QAM setting, especially for 8 pilots.
 4. All DNN runs in part (c) hit the maximum epoch count, so the model is clearly not well converged.
 5. Therefore, the main finding for part (c) is that simply changing QPSK to 64-QAM while keeping the same architecture causes severe performance degradation. This directly supports the discussion that the original QPSK-oriented FC-DNN is not sufficient for the harder 64-QAM task.
@@ -220,33 +236,13 @@ BER results:
 
 Discussion:
 
-1. This part is now a fairer comparison than the earlier heavily tuned version because both models use the same `train_samples` and `max_iter`.
+1. Both models use the same `train_samples` and `max_iter`.
 2. Under the same training budget, the single 128-bit DNN is much worse than the 16-bit DNN at every SNR point.
 3. This supports the intended message of the exercise: predicting the whole bit vector with a single FC-DNN is substantially harder than decomposing the task into smaller subnetworks.
-4. Therefore, for the current training budget, the multiple-small-network strategy is clearly more effective.
+4. For the current training budget, the multiple-small-network strategy is clearly more effective.
 
-## Convergence Summary
 
-1. Part (b) is the most stable and closest to convergence. Several runs stop before the maximum epoch count.
-2. Part (c) is clearly under-trained. All 64-QAM runs hit the maximum epoch count and still have poor BER.
-3. Part (d) shows that the full-output model is much harder to optimize than the small-output model when the training budget is fixed.
-4. The training-curve figures should be used to support the convergence discussion in the report.
-
-## Recommended Figures To Use In The Report
-
-For the main body, use BER figures first:
-
-1. `./figures/part_b_figure33_like.png`
-2. `./figures/part_c_64qam.png`
-3. `./figures/part_d_full_vs_small.png`
-
-For convergence discussion, add:
-
-1. `./figures/part_b_training_curves.png`
-2. `./figures/part_c_training_curves.png`
-3. `./figures/part_d_training_curves.png`
-
-## Key Output Files
+## Output Files
 
 1. Code: [DNN_Detection/modern_repro.py](./DNN_Detection/modern_repro.py)
 2. Combined summary: [results/summary.json](./results/summary.json)
